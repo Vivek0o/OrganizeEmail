@@ -26,6 +26,9 @@ import com.codeSmithLabs.organizeemail.ui.viewmodel.EmailViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+
 class MainActivity : ComponentActivity() {
     private val viewModel: EmailViewModel by viewModels()
 
@@ -264,10 +267,23 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("email_detail") {
+                        val context = LocalContext.current
                         EmailDetailScreen(
                             email = selectedEmail,
                             onBackClick = {
                                 navController.popBackStack()
+                            },
+                            onDownloadAttachment = { attachment ->
+                                selectedEmail?.let { email ->
+                                    Toast.makeText(context, "Downloading ${attachment.filename}...", Toast.LENGTH_SHORT).show()
+                                    viewModel.downloadAttachment(email.id, attachment) { success ->
+                                        if (success) {
+                                            Toast.makeText(context, "Downloaded ${attachment.filename}", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to download ${attachment.filename}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                         )
                     }

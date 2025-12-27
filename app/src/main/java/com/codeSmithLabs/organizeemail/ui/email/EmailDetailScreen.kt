@@ -18,7 +18,7 @@ import com.codeSmithLabs.organizeemail.data.model.EmailUI
 
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.viewinterop.AndroidView
 
 import java.text.SimpleDateFormat
@@ -30,7 +30,8 @@ import com.codeSmithLabs.organizeemail.data.model.AttachmentUI
 @Composable
 fun EmailDetailScreen(
     email: EmailUI?,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onDownloadAttachment: ((AttachmentUI) -> Unit)? = null
 ) {
     Scaffold(
         topBar = {
@@ -93,7 +94,10 @@ fun EmailDetailScreen(
                         
                         Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                             email.attachments.forEach { attachment ->
-                                AttachmentCard(attachment)
+                                AttachmentCard(
+                                    attachment = attachment,
+                                    onDownloadClick = { onDownloadAttachment?.invoke(attachment) }
+                                )
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
                         }
@@ -125,9 +129,12 @@ fun EmailDetailScreen(
 }
 
 @Composable
-fun AttachmentCard(attachment: AttachmentUI) {
+fun AttachmentCard(
+    attachment: AttachmentUI,
+    onDownloadClick: () -> Unit
+) {
     ElevatedCard(
-        onClick = { /* TODO: Implement download logic */ },
+        onClick = onDownloadClick,
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
@@ -139,7 +146,7 @@ fun AttachmentCard(attachment: AttachmentUI) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Home,
+                imageVector = Icons.Default.Email, // Placeholder for File Icon
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )

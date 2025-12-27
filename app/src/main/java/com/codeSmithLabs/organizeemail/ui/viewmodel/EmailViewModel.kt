@@ -184,4 +184,15 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     fun getAuthClient(): GoogleAuthClient = authClient
+
+    fun downloadAttachment(messageId: String, attachment: com.codeSmithLabs.organizeemail.data.model.AttachmentUI, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            if (attachment.attachmentId == null) {
+                onResult(false)
+                return@launch
+            }
+            val uri = repository.downloadAttachment(messageId, attachment.attachmentId, attachment.filename, attachment.mimeType)
+            onResult(uri != null)
+        }
+    }
 }

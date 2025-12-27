@@ -10,20 +10,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-
 import android.util.Log
 import retrofit2.HttpException
-
 import com.codeSmithLabs.organizeemail.data.model.GmailLabel
-
 import com.codeSmithLabs.organizeemail.ml.EmailClassifier
-
 import com.codeSmithLabs.organizeemail.data.model.AttachmentUI
-
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
 import android.content.Context
+import android.content.ContentValues
+import android.provider.MediaStore
+import android.os.Build
+import android.os.Environment
+import java.io.FileOutputStream
+import android.net.Uri
 
 class EmailRepository(
     private val authClient: GoogleAuthClient,
@@ -33,6 +34,70 @@ class EmailRepository(
     private val classifier = EmailClassifier()
     private val gson = Gson()
     
+    suspend fun downloadAttachment(
+        messageId: String,
+        attachmentId: String,
+        filename: String,
+        mimeType: String
+    ): Uri? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
+                val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
+                val apiService = RetrofitClient.getGmailService(token)
+                
+                val attachment = apiService.getAttachment(messageId, attachmentId)
+                val dataBase64 = attachment.data ?: return@withContext null
+
+                val sanitized = dataBase64.replace("-", "+").replace("_", "/")
+                val bytes = Base64.decode(sanitized, Base64.DEFAULT)
+
+                saveToDownloads(filename, bytes, mimeType)
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error downloading attachment", e)
+                null
+            }
+        }
+    }
+
+    private fun saveToDownloads(filename: String, bytes: ByteArray, mimeType: String): Uri? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            }
+            val resolver = context.contentResolver
+            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+            
+            uri?.let {
+                resolver.openOutputStream(it)?.use { outputStream ->
+                    outputStream.write(bytes)
+                }
+            }
+            uri
+        } else {
+            try {
+                val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename)
+                FileOutputStream(file).use { outputStream ->
+                    outputStream.write(bytes)
+                }
+                Uri.fromFile(file)
+            } catch (e: Exception) {
+                try {
+                    val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), filename)
+                    FileOutputStream(file).use { outputStream ->
+                        outputStream.write(bytes)
+                    }
+                    Uri.fromFile(file)
+                } catch (e2: Exception) {
+                    Log.e("EmailRepository", "Failed to save attachment", e2)
+                    null
+                }
+            }
+        }
+    }
+
     private fun getCacheFileName(labelId: String?): String {
         // Sanitize labelId to be a valid filename just in case
         val safeId = labelId?.replace(Regex("[^a-zA-Z0-9._-]"), "_") ?: "default"

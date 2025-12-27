@@ -23,4 +23,10 @@ interface GmailApiService {
         @Path("id") id: String,
         @Query("format") format: String = "full"
     ): GmailMessage
+
+    @GET("gmail/v1/users/me/messages/{messageId}/attachments/{id}")
+    suspend fun getAttachment(
+        @Path("messageId") messageId: String,
+        @Path("id") id: String
+    ): com.codeSmithLabs.organizeemail.data.model.MessageBody
 }
