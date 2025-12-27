@@ -20,6 +20,7 @@ import com.codeSmithLabs.organizeemail.data.model.EmailUI
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
+import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
 import com.codeSmithLabs.organizeemail.ui.theme.OrganizeEmailTheme
 import com.codeSmithLabs.organizeemail.ui.viewmodel.EmailViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -114,6 +115,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onSmartFilterClick = { type ->
                                 navController.navigate("smart_filter/$type")
+                            },
+                            onSettingsClick = {
+                                navController.navigate("settings")
                             },
                             showCategories = true,
                             showAllEmails = false
@@ -262,6 +266,13 @@ class MainActivity : ComponentActivity() {
                     composable("email_detail") {
                         EmailDetailScreen(
                             email = selectedEmail,
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable("settings") {
+                        SettingsScreen(
                             onBackClick = {
                                 navController.popBackStack()
                             }

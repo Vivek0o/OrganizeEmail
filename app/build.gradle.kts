@@ -65,6 +65,15 @@ dependencies {
     // Image Loading
     implementation(libs.coil.compose)
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // ViewModel for Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
