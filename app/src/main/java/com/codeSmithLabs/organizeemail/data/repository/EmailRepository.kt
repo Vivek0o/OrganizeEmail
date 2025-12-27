@@ -32,12 +32,17 @@ class EmailRepository(
 
     private val classifier = EmailClassifier()
     private val gson = Gson()
-    private val CACHE_FILE = "emails_cache.json"
+    
+    private fun getCacheFileName(labelId: String?): String {
+        // Sanitize labelId to be a valid filename just in case
+        val safeId = labelId?.replace(Regex("[^a-zA-Z0-9._-]"), "_") ?: "default"
+        return "emails_cache_$safeId.json"
+    }
 
-    suspend fun getEmailsFromCache(): List<EmailUI> {
+    suspend fun getEmailsFromCache(labelId: String? = null): List<EmailUI> {
         return withContext(Dispatchers.IO) {
             try {
-                val file = File(context.filesDir, CACHE_FILE)
+                val file = File(context.filesDir, getCacheFileName(labelId))
                 if (file.exists()) {
                     val json = file.readText()
                     val type = object : TypeToken<List<EmailUI>>() {}.type
@@ -52,14 +57,44 @@ class EmailRepository(
         }
     }
 
-    suspend fun saveEmailsToCache(emails: List<EmailUI>) {
+    suspend fun saveEmailsToCache(emails: List<EmailUI>, labelId: String? = null) {
         withContext(Dispatchers.IO) {
             try {
                 val json = gson.toJson(emails)
-                val file = File(context.filesDir, CACHE_FILE)
+                val file = File(context.filesDir, getCacheFileName(labelId))
                 file.writeText(json)
             } catch (e: Exception) {
                 Log.e("EmailRepository", "Error saving cache", e)
+            }
+        }
+    }
+
+    suspend fun getLabelsFromCache(): List<GmailLabel> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val file = File(context.filesDir, "labels_cache.json")
+                if (file.exists()) {
+                    val json = file.readText()
+                    val type = object : TypeToken<List<GmailLabel>>() {}.type
+                    gson.fromJson(json, type) ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error reading labels cache", e)
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun saveLabelsToCache(labels: List<GmailLabel>) {
+        withContext(Dispatchers.IO) {
+            try {
+                val json = gson.toJson(labels)
+                val file = File(context.filesDir, "labels_cache.json")
+                file.writeText(json)
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error saving labels cache", e)
             }
         }
     }
@@ -79,7 +114,7 @@ class EmailRepository(
         }
     }
 
-    suspend fun getEmails(): List<EmailUI> {
+    suspend fun getEmails(labelId: String? = null): List<EmailUI> {
         val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
         val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
         
@@ -87,7 +122,8 @@ class EmailRepository(
         
         try {
             // 1. Fetch List of IDs
-            val listResponse = service.listMessages(maxResults = 100)
+            val labelIds = if (labelId != null) listOf(labelId) else null
+            val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds)
             val messages = listResponse.messages ?: emptyList()
 
             // 2. Fetch Details for each ID (Parallel)

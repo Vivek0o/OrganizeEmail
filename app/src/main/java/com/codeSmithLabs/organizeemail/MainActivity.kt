@@ -100,8 +100,55 @@ class MainActivity : ComponentActivity() {
                             onCategoryClick = { category ->
                                 navController.navigate("category_list/$category")
                             },
+                            onLabelClick = { labelId ->
+                                viewModel.fetchEmails(labelId = labelId)
+                                navController.navigate("label_list/$labelId")
+                            },
                             showCategories = true,
                             showAllEmails = false
+                        )
+                    }
+                    composable("label_list/{labelId}") { backStackEntry ->
+                        val labelId = backStackEntry.arguments?.getString("labelId") ?: ""
+                        val labelName = labels.find { it.id == labelId }?.name ?: "Label"
+                        
+                        EmailListScreen(
+                            emails = emails,
+                            labels = labels,
+                            user = user,
+                            isLoading = isLoading,
+                            error = error,
+                            onEmailClick = { email ->
+                                selectedEmail = email
+                                navController.navigate("email_detail")
+                            },
+                            onSignOutClick = {
+                                viewModel.signOut()
+                                navController.navigate("login") {
+                                    popUpTo("email_list") { inclusive = true }
+                                }
+                            },
+                            title = labelName,
+                            onSenderClick = { key ->
+                                navController.navigate("sender_list/$key")
+                            },
+                            onCategoryClick = { category ->
+                                navController.navigate("category_list/$category")
+                            },
+                            onLabelClick = { newLabelId ->
+                                if (newLabelId != labelId) {
+                                    viewModel.fetchEmails(labelId = newLabelId)
+                                    navController.navigate("label_list/$newLabelId") {
+                                        popUpTo("email_list") { inclusive = false }
+                                    }
+                                }
+                            },
+                            showCategories = false,
+                            showAllEmails = true,
+                            onBackClick = {
+                                viewModel.fetchEmails() // Reset to Inbox
+                                navController.popBackStack()
+                            }
                         )
                     }
                     composable("category_list/{category}") { backStackEntry ->

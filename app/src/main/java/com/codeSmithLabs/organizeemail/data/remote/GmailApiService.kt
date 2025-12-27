@@ -14,7 +14,8 @@ interface GmailApiService {
     @GET("gmail/v1/users/me/messages")
     suspend fun listMessages(
         @Query("maxResults") maxResults: Int = 20,
-        @Query("q") query: String? = null
+        @Query("q") query: String? = null,
+        @Query("labelIds") labelIds: List<String>? = null
     ): GmailMessageListResponse
 
     @GET("gmail/v1/users/me/messages/{id}")

@@ -15,6 +15,9 @@ import android.util.Log
 
 import com.codeSmithLabs.organizeemail.data.model.GmailLabel
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+
 class EmailViewModel(application: Application) : AndroidViewModel(application) {
     
     private val authClient = GoogleAuthClient(application)
@@ -49,30 +52,72 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                 if (cachedEmails.isNotEmpty()) {
                     _emails.value = cachedEmails
                 }
+                
+                val cachedLabels = repository.getLabelsFromCache()
+                if (cachedLabels.isNotEmpty()) {
+                    _labels.value = cachedLabels
+                }
+
                 // Trigger sync
                 fetchEmails(isSync = true)
             }
         }
     }
 
-    fun fetchEmails(isSync: Boolean = false) {
+    fun fetchEmails(isSync: Boolean = false, labelId: String? = null) {
+        // Clear state immediately to avoid showing stale data from previous view
+        if (!isSync) {
+            _emails.value = emptyList()
+            _loading.value = true
+            _error.value = null
+        }
+
         viewModelScope.launch {
-            // Only show full loading if we have no data
-            if (_emails.value.isEmpty()) {
+            // 1. Try to load from cache immediately
+            val cachedEmails = repository.getEmailsFromCache(labelId)
+            
+            // If we are just switching labels, we might want to load cached labels too?
+            // Usually labels are global, so we don't need to re-fetch them for every label switch if we already have them.
+            // But if we are in this function, we probably want to refresh them or at least ensure they are loaded.
+            if (_labels.value.isEmpty()) {
+                 val cachedLabels = repository.getLabelsFromCache()
+                 if (cachedLabels.isNotEmpty()) {
+                     _labels.value = cachedLabels
+                 }
+            }
+            
+            if (cachedEmails.isNotEmpty()) {
+                _emails.value = cachedEmails
+                // If we have cached data, we don't show the full loading screen, 
+                // but we might want a "syncing" indicator (which we can add later if needed)
+                _loading.value = false 
+            } else {
+                // If no cache, show loader and clear list
+                _emails.value = emptyList()
                 _loading.value = true
             }
             
             _error.value = null
             try {
-                val newEmails = repository.getEmails()
-                _emails.value = newEmails
-                _labels.value = repository.getLabels()
-                
-                // Save to cache
-                repository.saveEmailsToCache(newEmails)
+                coroutineScope {
+                    // 2. Fetch new data in parallel
+                    val emailsDeferred = async { repository.getEmails(labelId) }
+                    val labelsDeferred = async { repository.getLabels() }
+
+                    val newEmails = emailsDeferred.await()
+                    val newLabels = labelsDeferred.await()
+
+                    // Update UI
+                    _emails.value = newEmails
+                    _labels.value = newLabels
+
+                    // Update Cache
+                    repository.saveLabelsToCache(newLabels)
+                    repository.saveEmailsToCache(newEmails, labelId)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.e("EmailViewModel", "Error fetching emails", e)
+                Log.e("EmailViewModel", "Error fetching emails/labels", e)
                 // Only show error if we have no data to show
                 if (_emails.value.isEmpty()) {
                     _error.value = e.message ?: "Unknown error"

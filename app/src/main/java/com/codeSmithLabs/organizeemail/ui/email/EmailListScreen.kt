@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
+import com.codeSmithLabs.organizeemail.R
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Home
 import com.codeSmithLabs.organizeemail.data.model.GmailLabel
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.coroutines.launch
@@ -36,7 +35,8 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.ui.res.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +53,8 @@ fun EmailListScreen(
     onCategoryClick: ((String) -> Unit)? = null,
     showCategories: Boolean = false,
     showAllEmails: Boolean = true,
-    onBackClick: (() -> Unit)? = null
+    onBackClick: (() -> Unit)? = null,
+    onLabelClick: ((String) -> Unit)? = null
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -111,23 +112,64 @@ fun EmailListScreen(
                 HorizontalDivider()
 
                 // Labels List
+                var isLabelsExpanded by remember { mutableStateOf(false) }
+
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     item {
-                        Text(
-                            text = "Labels",
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    items(labels.filter { it.type == "user" }) { label ->
                         NavigationDrawerItem(
-                            label = { Text(text = label.name) },
+                            label = { Text("Labels") },
                             selected = false,
-                            onClick = { /* Handle label click later */ },
-                            icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                            onClick = { isLabelsExpanded = !isLabelsExpanded },
+                            icon = { Icon(painter = painterResource(R.drawable.ic_label), contentDescription = null) },
+                            badge = {
+                                Icon(
+                                    imageVector = if (isLabelsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isLabelsExpanded) "Collapse" else "Expand"
+                                )
+                            },
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                         )
+                    }
+
+                    if (isLabelsExpanded) {
+                        if (labels.isEmpty() && isLoading) {
+                             item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                             }
+                        } else {
+                            items(labels.filter { it.type == "user" }) { label ->
+                                NavigationDrawerItem(
+                                    label = { Text(text = label.name) },
+                                    selected = false,
+                                    onClick = { 
+                                        onLabelClick?.invoke(label.id)
+                                        scope.launch { drawerState.close() }
+                                    },
+                                    icon = { 
+                                         Icon(
+                                             imageVector = Icons.Rounded.KeyboardArrowRight,
+                                             contentDescription = null,
+                                             modifier = Modifier.size(18.dp),
+                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                         ) 
+                                    },
+                                    modifier = Modifier
+                                        .padding(start = 24.dp) // Indent children
+                                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                                        .height(48.dp)
+                                )
+                            }
+                        }
                     }
                 }
 
