@@ -1,11 +1,13 @@
 package com.codeSmithLabs.organizeemail.ui.email
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -36,7 +38,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import com.codeSmithLabs.organizeemail.ui.common.AppIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +59,8 @@ fun EmailListScreen(
     showCategories: Boolean = false,
     showAllEmails: Boolean = true,
     onBackClick: (() -> Unit)? = null,
-    onLabelClick: ((String) -> Unit)? = null
+    onLabelClick: ((String) -> Unit)? = null,
+    onSmartFilterClick: ((String) -> Unit)? = null
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -224,14 +230,22 @@ fun EmailListScreen(
                     )
                 } else {
                     if (showCategories && onCategoryClick != null) {
-                        CategoryCardGrid(emails = emails, onCategoryClick = onCategoryClick)
+                        CategoryCardGrid(
+                            emails = emails,
+                            onCategoryClick = onCategoryClick,
+                            onSmartFilterClick = onSmartFilterClick
+                        )
                     } else if (onSenderClick != null && !showAllEmails) {
                         SenderCardGrid(emails = emails, onSenderClick = onSenderClick)
                     } else {
-                        LazyColumn {
-                            items(emails) { email ->
-                                EmailItem(email, onClick = { onEmailClick(email) })
-                                HorizontalDivider()
+                        if (emails.isEmpty()) {
+                            EmptyStateView()
+                        } else {
+                            LazyColumn {
+                                items(emails) { email ->
+                                    EmailItem(email, onClick = { onEmailClick(email) })
+                                    HorizontalDivider()
+                                }
                             }
                         }
                     }
@@ -242,7 +256,27 @@ fun EmailListScreen(
 }
 
 @Composable
-fun CategoryCardGrid(emails: List<EmailUI>, onCategoryClick: (String) -> Unit) {
+fun EmptyStateView() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_empty_mails),
+            contentDescription = "No Emails",
+            modifier = Modifier.size(240.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun CategoryCardGrid(
+    emails: List<EmailUI>,
+    onCategoryClick: (String) -> Unit,
+    onSmartFilterClick: ((String) -> Unit)? = null
+) {
     val groups = emails.groupBy { it.category }.toList().sortedByDescending { it.second.size }
 
     LazyVerticalGrid(
@@ -252,8 +286,121 @@ fun CategoryCardGrid(emails: List<EmailUI>, onCategoryClick: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Smart Filters Section
+        if (onSmartFilterClick != null) {
+            item(span = { GridItemSpan(2) }) {
+                SmartFiltersSection(emails = emails, onSmartFilterClick = onSmartFilterClick)
+            }
+            
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    text = "Categories",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+        }
+
         items(groups) { (category, list) ->
             CategoryCard(category = category, emails = list, onClick = { onCategoryClick(category) })
+        }
+    }
+}
+
+@Composable
+fun SmartFiltersSection(
+    emails: List<EmailUI>,
+    onSmartFilterClick: (String) -> Unit
+) {
+    val unreadCount = emails.count { it.isUnread }
+    val attachmentCount = emails.count { it.hasMeaningfulAttachment }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Smart Filters",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SmartFilterCard(
+                title = "Unread",
+                count = unreadCount,
+                icon = AppIcon.Vector(Icons.Default.Email),
+                color = MaterialTheme.colorScheme.primary,
+                onClick = { onSmartFilterClick("unread") },
+                modifier = Modifier.weight(1f)
+            )
+            
+            SmartFilterCard(
+                title = "Attachments",
+                count = attachmentCount,
+                icon =  AppIcon.PainterIcon(painterResource(R.drawable.ic_attachement)),
+                color = MaterialTheme.colorScheme.tertiary,
+                onClick = { onSmartFilterClick("attachments") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SmartFilterCard(
+    title: String,
+    count: Int,
+    icon: AppIcon,
+    color: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.height(110.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            when (icon) {
+                is AppIcon.Vector -> {
+                    Icon(
+                        imageVector = icon.imageVector,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                is AppIcon.PainterIcon -> {
+                    Icon(
+                        painter = icon.painter,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

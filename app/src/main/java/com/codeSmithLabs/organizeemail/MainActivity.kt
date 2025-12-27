@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -72,6 +73,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("email_list") {
+                        // Ensure we are showing Inbox data when on the main screen
+                        LaunchedEffect(Unit) {
+                            // Only fetch if we are NOT already showing inbox (optimization)
+                            // But since fetchEmails handles cache efficiently, we can just call it with null
+                            viewModel.fetchEmails(labelId = null)
+                        }
+
                         if (user == null) {
                             navController.navigate("login") {
                                 popUpTo("email_list") { inclusive = true }
@@ -104,8 +112,52 @@ class MainActivity : ComponentActivity() {
                                 viewModel.fetchEmails(labelId = labelId)
                                 navController.navigate("label_list/$labelId")
                             },
+                            onSmartFilterClick = { type ->
+                                navController.navigate("smart_filter/$type")
+                            },
                             showCategories = true,
                             showAllEmails = false
+                        )
+                    }
+                    composable("smart_filter/{type}") { backStackEntry ->
+                        val type = backStackEntry.arguments?.getString("type") ?: ""
+                        val title = when (type) {
+                            "unread" -> "Unread Emails"
+                            "attachments" -> "Emails with Attachments"
+                            else -> "Filtered Emails"
+                        }
+                        
+                        val filtered = when (type) {
+                            "unread" -> emails.filter { it.isUnread }
+                            "attachments" -> emails.filter { it.hasMeaningfulAttachment }
+                            else -> emptyList()
+                        }
+                        
+                        EmailListScreen(
+                            emails = filtered,
+                            labels = emptyList(),
+                            user = user,
+                            isLoading = false,
+                            error = null,
+                            onEmailClick = { email ->
+                                selectedEmail = email
+                                navController.navigate("email_detail")
+                            },
+                            onSignOutClick = {
+                                viewModel.signOut()
+                                navController.navigate("login") {
+                                    popUpTo("email_list") { inclusive = true }
+                                }
+                            },
+                            title = title,
+                            onSenderClick = { key ->
+                                navController.navigate("sender_list/$key")
+                            },
+                            showCategories = false,
+                            showAllEmails = false,
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
                         )
                     }
                     composable("label_list/{labelId}") { backStackEntry ->
@@ -146,7 +198,6 @@ class MainActivity : ComponentActivity() {
                             showCategories = false,
                             showAllEmails = true,
                             onBackClick = {
-                                viewModel.fetchEmails() // Reset to Inbox
                                 navController.popBackStack()
                             }
                         )

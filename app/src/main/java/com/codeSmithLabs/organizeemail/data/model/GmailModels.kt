@@ -16,6 +16,7 @@ data class MessageSummary(
 data class GmailMessage(
     @SerializedName("id") val id: String,
     @SerializedName("threadId") val threadId: String,
+    @SerializedName("labelIds") val labelIds: List<String>?,
     @SerializedName("snippet") val snippet: String?,
     @SerializedName("payload") val payload: MessagePart?,
     @SerializedName("internalDate") val internalDate: Long
@@ -51,7 +52,9 @@ data class EmailUI(
     val date: String,
     val snippet: String,
     val body: String,
-    val attachments: List<AttachmentUI> = emptyList()
+    val attachments: List<AttachmentUI> = emptyList(),
+    val isUnread: Boolean = false,
+    val hasMeaningfulAttachment: Boolean = false
 )
 
 data class AttachmentUI(

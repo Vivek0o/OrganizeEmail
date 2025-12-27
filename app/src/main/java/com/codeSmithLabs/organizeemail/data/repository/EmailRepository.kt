@@ -164,6 +164,9 @@ class EmailRepository(
         
         val body = getBodyFromMessage(message.payload)
         val attachments = getAttachmentsFromMessage(message.payload, message.id)
+        
+        val isUnread = message.labelIds?.contains("UNREAD") == true
+        val hasMeaningfulAttachment = attachments.any { isMeaningfulAttachment(it) }
 
         return EmailUI(
             id = message.id,
@@ -175,8 +178,29 @@ class EmailRepository(
             date = date,
             snippet = snippet,
             body = body,
-            attachments = attachments
+            attachments = attachments,
+            isUnread = isUnread,
+            hasMeaningfulAttachment = hasMeaningfulAttachment
         )
+    }
+
+    private fun isMeaningfulAttachment(attachment: AttachmentUI): Boolean {
+        // 1. Size Check (> 50KB)
+        if (attachment.size < 50 * 1024) return false
+
+        // 2. Mime Type Check
+        val meaningfulMimeTypes = listOf(
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // docx
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // xlsx
+            "application/zip",
+            "application/x-zip-compressed"
+        )
+        
+        return meaningfulMimeTypes.any { attachment.mimeType.startsWith(it, ignoreCase = true) } || 
+               attachment.mimeType.startsWith("image/", ignoreCase = true)
     }
 
     private fun extractDomain(sender: String): String? {
