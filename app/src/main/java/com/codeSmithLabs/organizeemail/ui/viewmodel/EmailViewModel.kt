@@ -18,7 +18,7 @@ import com.codeSmithLabs.organizeemail.data.model.GmailLabel
 class EmailViewModel(application: Application) : AndroidViewModel(application) {
     
     private val authClient = GoogleAuthClient(application)
-    private val repository = EmailRepository(authClient)
+    private val repository = EmailRepository(authClient, application)
 
     // UI State
     private val _emails = MutableStateFlow<List<EmailUI>>(emptyList())
@@ -43,21 +43,40 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkUserLoggedIn() {
         _user.value = authClient.getLastSignedInAccount()
         if (_user.value != null) {
-            fetchEmails()
+            // Load cache immediately if available
+            viewModelScope.launch {
+                val cachedEmails = repository.getEmailsFromCache()
+                if (cachedEmails.isNotEmpty()) {
+                    _emails.value = cachedEmails
+                }
+                // Trigger sync
+                fetchEmails(isSync = true)
+            }
         }
     }
 
-    fun fetchEmails() {
+    fun fetchEmails(isSync: Boolean = false) {
         viewModelScope.launch {
-            _loading.value = true
+            // Only show full loading if we have no data
+            if (_emails.value.isEmpty()) {
+                _loading.value = true
+            }
+            
             _error.value = null
             try {
-                _emails.value = repository.getEmails()
+                val newEmails = repository.getEmails()
+                _emails.value = newEmails
                 _labels.value = repository.getLabels()
+                
+                // Save to cache
+                repository.saveEmailsToCache(newEmails)
             } catch (e: Exception) {
                 e.printStackTrace()
                 Log.e("EmailViewModel", "Error fetching emails", e)
-                _error.value = e.message ?: "Unknown error"
+                // Only show error if we have no data to show
+                if (_emails.value.isEmpty()) {
+                    _error.value = e.message ?: "Unknown error"
+                }
             } finally {
                 _loading.value = false
             }

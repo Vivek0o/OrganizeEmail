@@ -20,9 +20,49 @@ import com.codeSmithLabs.organizeemail.ml.EmailClassifier
 
 import com.codeSmithLabs.organizeemail.data.model.AttachmentUI
 
-class EmailRepository(private val authClient: GoogleAuthClient) {
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
+import android.content.Context
+
+class EmailRepository(
+    private val authClient: GoogleAuthClient,
+    private val context: Context
+) {
 
     private val classifier = EmailClassifier()
+    private val gson = Gson()
+    private val CACHE_FILE = "emails_cache.json"
+
+    suspend fun getEmailsFromCache(): List<EmailUI> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val file = File(context.filesDir, CACHE_FILE)
+                if (file.exists()) {
+                    val json = file.readText()
+                    val type = object : TypeToken<List<EmailUI>>() {}.type
+                    gson.fromJson(json, type) ?: emptyList()
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error reading cache", e)
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun saveEmailsToCache(emails: List<EmailUI>) {
+        withContext(Dispatchers.IO) {
+            try {
+                val json = gson.toJson(emails)
+                val file = File(context.filesDir, CACHE_FILE)
+                file.writeText(json)
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error saving cache", e)
+            }
+        }
+    }
 
     suspend fun getLabels(): List<GmailLabel> {
         val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")

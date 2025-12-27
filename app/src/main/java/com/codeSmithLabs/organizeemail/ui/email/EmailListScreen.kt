@@ -147,7 +147,7 @@ fun EmailListScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (showCategories) "Top Categories" else title) },
+                    title = { Text(if (showCategories) "OrganizeEmail" else title) },
                     navigationIcon = {
                         if (onBackClick != null) {
                             IconButton(onClick = onBackClick) {
@@ -186,7 +186,6 @@ fun EmailListScreen(
                     } else if (onSenderClick != null && !showAllEmails) {
                         SenderCardGrid(emails = emails, onSenderClick = onSenderClick)
                     } else {
-                        // Level 3: Email List (for specific sender)
                         LazyColumn {
                             items(emails) { email ->
                                 EmailItem(email, onClick = { onEmailClick(email) })
