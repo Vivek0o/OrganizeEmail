@@ -182,10 +182,8 @@ fun EmailListScreen(
                     )
                 } else {
                     if (showCategories && onCategoryClick != null) {
-                        // Level 1: Category Grid
                         CategoryCardGrid(emails = emails, onCategoryClick = onCategoryClick)
                     } else if (onSenderClick != null && !showAllEmails) {
-                        // Level 2: Sender Grid (for specific category)
                         SenderCardGrid(emails = emails, onSenderClick = onSenderClick)
                     } else {
                         // Level 3: Email List (for specific sender)
@@ -214,15 +212,17 @@ fun CategoryCardGrid(emails: List<EmailUI>, onCategoryClick: (String) -> Unit) {
         modifier = Modifier.fillMaxSize()
     ) {
         items(groups) { (category, list) ->
-            CategoryCard(category = category, count = list.size, onClick = { onCategoryClick(category) })
+            CategoryCard(category = category, emails = list, onClick = { onCategoryClick(category) })
         }
     }
 }
 
 @Composable
-fun CategoryCard(category: String, count: Int, onClick: () -> Unit) {
-    val icon = getCategoryIcon(category)
+fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
     val color = getCategoryColor(category)
+    val senders = remember(emails) {
+        emails.distinctBy { it.senderKey }.take(4)
+    }
 
     ElevatedCard(
         onClick = onClick,
@@ -239,17 +239,13 @@ fun CategoryCard(category: String, count: Int, onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
+                    .width(80.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(color.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = category,
-                    tint = color,
-                    modifier = Modifier.size(28.dp)
-                )
+                CategoryIconGrid(senders = senders)
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -260,7 +256,7 @@ fun CategoryCard(category: String, count: Int, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "$count Emails",
+                text = "${emails.size} Emails",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -268,16 +264,115 @@ fun CategoryCard(category: String, count: Int, onClick: () -> Unit) {
     }
 }
 
-fun getCategoryIcon(category: String): ImageVector {
-    return when (category) {
-        "Finance" -> Icons.Default.Home
-        "Jobs" -> Icons.Default.Home
-        "Shopping" -> Icons.Default.ShoppingCart
-        "Travel" -> Icons.Default.Home
-        "Social" -> Icons.Default.Home
-        "Tech" -> Icons.Default.Home
-        "Entertainment" -> Icons.Default.Home
-        else -> Icons.Default.ShoppingCart
+@Composable
+fun CategoryIconGrid(senders: List<EmailUI>) {
+    val count = senders.size
+    val spacing = 2.dp
+    
+    when (count) {
+        1 -> {
+             val sender = senders[0]
+             SenderAvatar(
+                 name = sender.senderKey,
+                 domain = sender.senderDomain,
+                 modifier = Modifier.size(40.dp),
+                 textStyle = MaterialTheme.typography.titleLarge
+             )
+        }
+        2 -> {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                senders.forEach { sender ->
+                    SenderAvatar(
+                        name = sender.senderKey,
+                        domain = sender.senderDomain,
+                        modifier = Modifier.size(28.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+        3 -> {
+             Column(
+                 verticalArrangement = Arrangement.spacedBy(spacing), 
+                 horizontalAlignment = Alignment.CenterHorizontally
+             ) {
+                 Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                     senders.take(2).forEach { sender ->
+                         SenderAvatar(
+                            name = sender.senderKey,
+                            domain = sender.senderDomain,
+                            modifier = Modifier.size(24.dp),
+                            textStyle = MaterialTheme.typography.labelSmall
+                        )
+                     }
+                 }
+                 SenderAvatar(
+                    name = senders[2].senderKey,
+                    domain = senders[2].senderDomain,
+                    modifier = Modifier.size(24.dp),
+                    textStyle = MaterialTheme.typography.labelSmall
+                )
+             }
+        }
+        4 -> {
+             Column(verticalArrangement = Arrangement.spacedBy(spacing)) {
+                 Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                     senders.take(2).forEach { sender ->
+                         SenderAvatar(
+                            name = sender.senderKey,
+                            domain = sender.senderDomain,
+                            modifier = Modifier.size(24.dp),
+                            textStyle = MaterialTheme.typography.labelSmall
+                        )
+                     }
+                 }
+                 Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                     senders.drop(2).take(2).forEach { sender ->
+                         SenderAvatar(
+                            name = sender.senderKey,
+                            domain = sender.senderDomain,
+                            modifier = Modifier.size(24.dp),
+                            textStyle = MaterialTheme.typography.labelSmall
+                        )
+                     }
+                 }
+             }
+        }
+    }
+}
+
+@Composable
+fun SenderAvatar(
+    name: String,
+    domain: String?,
+    modifier: Modifier = Modifier,
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium
+) {
+    val faviconUrl = if (domain != null) "https://www.google.com/s2/favicons?domain=$domain&sz=64" else null
+    val randomColor = remember(name) { getColorForName(name) }
+    var imageLoadFailed by remember { mutableStateOf(false) }
+
+    if (faviconUrl != null && !imageLoadFailed) {
+        AsyncImage(
+            model = faviconUrl,
+            contentDescription = name,
+            modifier = modifier.clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop,
+            onError = { imageLoadFailed = true }
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(randomColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = name.take(1).uppercase(),
+                style = textStyle,
+                color = Color.White
+            )
+        }
     }
 }
 
