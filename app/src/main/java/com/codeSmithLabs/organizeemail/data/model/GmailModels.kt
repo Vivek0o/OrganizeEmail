@@ -74,3 +74,9 @@ data class GmailLabel(
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String
 )
+
+data class BatchModifyRequest(
+    @SerializedName("ids") val ids: List<String>,
+    @SerializedName("addLabelIds") val addLabelIds: List<String> = emptyList(),
+    @SerializedName("removeLabelIds") val removeLabelIds: List<String> = emptyList()
+)

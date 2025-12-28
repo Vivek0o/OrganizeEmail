@@ -5,8 +5,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +35,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -56,6 +62,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -102,10 +109,16 @@ fun EmailListScreen(
     onBackClick: (() -> Unit)? = null,
     onLabelClick: ((String) -> Unit)? = null,
     onSmartFilterClick: ((String) -> Unit)? = null,
-    onSettingsClick: (() -> Unit)? = null
+    onSettingsClick: (() -> Unit)? = null,
+    onCleanupClick: (() -> Unit)? = null,
+    onDeleteEmails: ((List<String>) -> Unit)? = null
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Selection Mode State
+    var selectedEmailIds by remember { mutableStateOf(emptySet<String>()) }
+    val isSelectionMode = selectedEmailIds.isNotEmpty()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -232,6 +245,19 @@ fun EmailListScreen(
                             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                         )
                     }
+
+                    item {
+                        NavigationDrawerItem(
+                            label = { Text("Cleanup Assistant") },
+                            selected = false,
+                            onClick = {
+                                onCleanupClick?.invoke()
+                                scope.launch { drawerState.close() }
+                            },
+                            icon = { Icon(Icons.Default.Build, contentDescription = null) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
                 }
 
                 HorizontalDivider()
@@ -261,28 +287,67 @@ fun EmailListScreen(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(if (showCategories) "OrganizeEmail" else title) },
-                    navigationIcon = {
-                        if (onBackClick != null) {
-                            IconButton(onClick = onBackClick) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                if (isSelectionMode) {
+                    TopAppBar(
+                        title = { Text("${selectedEmailIds.size} Selected") },
+                        navigationIcon = {
+                            IconButton(onClick = { selectedEmailIds = emptySet() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close Selection")
                             }
-                        } else if (onCategoryClick != null || onSenderClick != null && showCategories) { // Show Menu on main/category screen
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        actions = {
+                            TextButton(onClick = {
+                                if (selectedEmailIds.size == emails.size) {
+                                    selectedEmailIds = emptySet()
+                                } else {
+                                    selectedEmailIds = emails.map { it.id }.toSet()
+                                }
+                            }) {
+                                Text(
+                                    text = if (selectedEmailIds.size == emails.size) "Deselect All" else "Select All",
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            
+                            if (onDeleteEmails != null) {
+                                IconButton(onClick = {
+                                    onDeleteEmails(selectedEmailIds.toList())
+                                    selectedEmailIds = emptySet()
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Selected")
+                                }
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    actions = {
-                        // Removed direct logout from top bar, moved to drawer
-                    }
-                )
+                    )
+                } else {
+                    TopAppBar(
+                        title = { Text(if (showCategories) "OrganizeEmail" else title) },
+                        navigationIcon = {
+                            if (onBackClick != null) {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            } else if (onCategoryClick != null || onSenderClick != null && showCategories) { // Show Menu on main/category screen
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        actions = {
+                            // Removed direct logout from top bar, moved to drawer
+                        }
+                    )
+                }
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
@@ -310,7 +375,24 @@ fun EmailListScreen(
                         } else {
                             LazyColumn {
                                 items(emails) { email ->
-                                    EmailItem(email, onClick = { onEmailClick(email) })
+                                    val isSelected = selectedEmailIds.contains(email.id)
+                                    EmailItem(
+                                        email = email,
+                                        isSelected = isSelected,
+                                        inSelectionMode = isSelectionMode,
+                                        onClick = {
+                                            if (isSelectionMode) {
+                                                selectedEmailIds = if (isSelected) selectedEmailIds - email.id else selectedEmailIds + email.id
+                                            } else {
+                                                onEmailClick(email)
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!isSelectionMode) {
+                                                selectedEmailIds = selectedEmailIds + email.id
+                                            }
+                                        }
+                                    )
                                     HorizontalDivider()
                                 }
                             }
@@ -728,48 +810,76 @@ fun SenderCard(name: String, domain: String?, count: Int, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EmailItem(email: EmailUI, onClick: () -> Unit) {
+fun EmailItem(
+    email: EmailUI,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
+) {
     val senderName = email.sender.substringBefore("<").trim()
     val randomColor = remember(email.senderKey) { getColorForName(email.senderKey) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color.Transparent)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Sender Avatar (Favicon or Initials)
-        if (email.senderDomain != null) {
-            AsyncImage(
-                model = "https://www.google.com/s2/favicons?domain=${email.senderDomain}&sz=64",
-                contentDescription = senderName,
+        // Selection Indicator or Sender Avatar
+        if (isSelected) {
+            Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop,
-                error = rememberVectorPainter(Icons.Default.AccountCircle) // Fallback handled by AsyncImage? No, explicit fallback needed usually but AsyncImage handles nulls
-            )
-        } else {
-             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(randomColor),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = senderName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
+            }
+        } else {
+            // Existing Avatar Logic
+            if (email.senderDomain != null) {
+                AsyncImage(
+                    model = "https://www.google.com/s2/favicons?domain=${email.senderDomain}&sz=64",
+                    contentDescription = senderName,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop,
+                    error = rememberVectorPainter(Icons.Default.AccountCircle)
+                )
+            } else {
+                 Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(randomColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = senderName.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Email Content
+        // Email Content (Same as before)
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

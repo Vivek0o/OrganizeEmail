@@ -20,6 +20,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitAll
+
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 
 class EmailViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -29,6 +35,79 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     // UI State
     private val _emails = MutableStateFlow<List<EmailUI>>(emptyList())
     val emails = _emails.asStateFlow()
+
+    // Cleanup Assistant Stats
+    private val _promotionalCount = MutableStateFlow(0)
+    val promotionalCount = _promotionalCount.asStateFlow()
+
+    private val _bankAdCount = MutableStateFlow(0)
+    val bankAdCount = _bankAdCount.asStateFlow()
+
+    private val _heavyEmailCount = MutableStateFlow(0)
+    val heavyEmailCount = _heavyEmailCount.asStateFlow()
+    
+    fun refreshCleanupStats() {
+        viewModelScope.launch {
+             try {
+                 val promoDeferred = async { repository.getCleanupCount("promotional") }
+                 val bankDeferred = async { repository.getCleanupCount("bank_ads") }
+                 val heavyDeferred = async { repository.getCleanupCount("heavy") }
+
+                 _promotionalCount.value = promoDeferred.await()
+                 _bankAdCount.value = bankDeferred.await()
+                 _heavyEmailCount.value = heavyDeferred.await()
+             } catch (e: Exception) {
+                 Log.e("EmailViewModel", "Error refreshing cleanup stats", e)
+             }
+        }
+    }
+
+    fun fetchCleanupEmails(type: String) {
+        fetchJob?.cancel()
+        
+        _loading.value = true
+        _error.value = null
+        _emails.value = emptyList()
+        
+        viewModelScope.launch {
+            try {
+                val emails = repository.getCleanupEmails(type)
+                _emails.value = emails
+            } catch (e: Exception) {
+                 _error.value = "Failed to load emails: ${e.message}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+    
+    fun deleteEmail(emailId: String) {
+        deleteEmails(listOf(emailId))
+    }
+
+    fun deleteEmails(emailIds: List<String>) {
+        viewModelScope.launch {
+            try {
+                // Optimistic UI update
+                val previousEmails = _emails.value
+                _emails.value = _emails.value.filter { !emailIds.contains(it.id) }
+                
+                // Batch API call
+                try {
+                    repository.trashEmails(emailIds)
+                    // Update stats
+                    refreshCleanupStats()
+                } catch (e: Exception) {
+                    Log.e("EmailViewModel", "Failed to trash emails", e)
+                    // Revert UI on failure if needed, or just let next sync handle it
+                    // For now, let's just log. 
+                    // Ideally we should show a snackbar.
+                }
+            } catch (e: Exception) {
+                Log.e("EmailViewModel", "Error deleting emails", e)
+            }
+        }
+    }
 
     private val _labels = MutableStateFlow<List<GmailLabel>>(emptyList())
     val labels = _labels.asStateFlow()
@@ -66,6 +145,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Trigger sync
                 fetchEmails(isSync = true)
+                refreshCleanupStats()
             }
         }
     }

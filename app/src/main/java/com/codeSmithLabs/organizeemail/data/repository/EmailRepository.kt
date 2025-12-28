@@ -299,51 +299,14 @@ class EmailRepository(
             return decodeBase64(part.body.data)
         }
         
-        part.parts?.let { parts ->
-            // Prefer HTML
-            val htmlPart = parts.find { it.mimeType == "text/html" }
-            if (htmlPart?.body?.data != null) {
-                return decodeBase64(htmlPart.body.data)
-            }
-            // Fallback to Plain Text
-            val textPart = parts.find { it.mimeType == "text/plain" }
-            if (textPart?.body?.data != null) {
-                return decodeBase64(textPart.body.data)
-            }
-            
-            // Recursively search
-            for (subPart in parts) {
-                val res = getBodyFromMessage(subPart)
-                if (res.isNotEmpty()) return res
+        if (part.parts != null) {
+            for (subPart in part.parts) {
+                val body = getBodyFromMessage(subPart)
+                if (body.isNotEmpty()) return body
             }
         }
         
         return ""
-    }
-
-    private fun getAttachmentsFromMessage(part: MessagePart?, messageId: String): List<AttachmentUI> {
-        val attachments = mutableListOf<AttachmentUI>()
-        if (part == null) return attachments
-
-        // Check if the current part is an attachment
-        if (!part.filename.isNullOrEmpty() && part.body?.attachmentId != null) {
-            attachments.add(
-                AttachmentUI(
-                    filename = part.filename,
-                    mimeType = part.mimeType ?: "application/octet-stream",
-                    size = part.body.size,
-                    attachmentId = part.body.attachmentId,
-                    partId = part.partId
-                )
-            )
-        }
-
-        // Recursively check sub-parts
-        part.parts?.forEach { subPart ->
-            attachments.addAll(getAttachmentsFromMessage(subPart, messageId))
-        }
-
-        return attachments
     }
 
     private fun decodeBase64(data: String): String {
@@ -352,7 +315,152 @@ class EmailRepository(
             val bytes = Base64.decode(sanitized, Base64.DEFAULT)
             String(bytes)
         } catch (e: Exception) {
-            "Error decoding body"
+            ""
         }
+    }
+
+    private fun getAttachmentsFromMessage(part: MessagePart?, messageId: String): List<AttachmentUI> {
+        val attachments = mutableListOf<AttachmentUI>()
+        if (part == null) return attachments
+
+        if (!part.filename.isNullOrEmpty() && part.body?.attachmentId != null) {
+            attachments.add(
+                AttachmentUI(
+                    filename = part.filename,
+                    mimeType = part.mimeType ?: "application/octet-stream",
+                    size = part.body.size ?: 0,
+                    attachmentId = part.body.attachmentId,
+                    partId = part.partId
+                )
+            )
+        }
+
+        part.parts?.forEach { subPart ->
+            attachments.addAll(getAttachmentsFromMessage(subPart, messageId))
+        }
+
+        return attachments
+    }
+
+    suspend fun trashEmail(id: String) {
+        val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
+        val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
+        val service = RetrofitClient.getGmailService(token)
+        service.trashMessage(id)
+    }
+
+    suspend fun trashEmails(ids: List<String>) {
+        if (ids.isEmpty()) return
+        val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
+        val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
+        val service = RetrofitClient.getGmailService(token)
+        
+        ids.chunked(50).forEach { chunk ->
+            val request = com.codeSmithLabs.organizeemail.data.model.BatchModifyRequest(
+                ids = chunk,
+                addLabelIds = listOf("TRASH")
+            )
+            service.batchModify(request)
+        }
+    }
+
+    suspend fun getCleanupEmails(type: String): List<EmailUI> {
+        val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
+        val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
+        val service = RetrofitClient.getGmailService(token)
+
+        val (labelIds, query) = when (type) {
+            "promotional" -> Pair(listOf("CATEGORY_PROMOTIONS", "INBOX"), null)
+            "heavy" -> Pair(null, "larger:5M")
+            "bank_ads" -> Pair(listOf("CATEGORY_UPDATES"), null) 
+            else -> Pair(null, null)
+        }
+
+        try {
+            val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds, query = query)
+            val messages = listResponse.messages ?: emptyList()
+
+            val emails = withContext(Dispatchers.IO) {
+                messages.map { summary ->
+                    async {
+                        try {
+                            val fullMessage = service.getMessage(summary.id)
+                            mapToEmailUI(fullMessage)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+
+            return if (type == "bank_ads") {
+                 emails.filter { isBankAd(it) }
+            } else {
+                 emails
+            }
+        } catch (e: Exception) {
+            Log.e("EmailRepository", "Error fetching cleanup emails", e)
+            return emptyList()
+        }
+    }
+
+    suspend fun getCleanupCount(type: String): Int {
+        val account = authClient.getLastSignedInAccount() ?: return 0
+        val token = authClient.getAccessToken(account) ?: return 0
+        val service = RetrofitClient.getGmailService(token)
+
+        val (labelIds, query) = when (type) {
+            "promotional" -> Pair(listOf("CATEGORY_PROMOTIONS", "INBOX"), null)
+            "heavy" -> Pair(null, "larger:5M")
+            "bank_ads" -> Pair(listOf("CATEGORY_UPDATES"), null)
+            else -> Pair(null, null)
+        }
+
+        try {
+            if (type == "bank_ads") {
+                val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds, query = query)
+                val messages = listResponse.messages ?: emptyList()
+
+                return withContext(Dispatchers.IO) {
+                    messages.map { summary ->
+                        async {
+                            try {
+                                val msg = service.getMessage(summary.id, format = "metadata")
+                                val headers = msg.payload?.headers
+                                val subject = headers?.find { it.name.equals("Subject", ignoreCase = true) }?.value ?: ""
+                                val sender = headers?.find { it.name.equals("From", ignoreCase = true) }?.value ?: ""
+                                val snippet = msg.snippet ?: ""
+                                
+                                val bankKeywords = listOf("bank", "pay", "wallet", "card", "finance", "invest", "mutual", "fund", "stock", "insurance", "loan", "tax", "gst", "hdfc", "sbi", "axis", "icici", "kotak", "pnb", "bob", "paytm", "phonepe", "razorpay", "gpay", "googlepay", "cred", "zerodha", "groww", "upstox", "indmoney", "dhan", "navi")
+                                val transactionalKeywords = listOf("statement", "bill", "invoice", "transaction", "alert", "otp", "debit", "credit", "payment", "received", "sent")
+                                
+                                val content = (subject + " " + snippet).lowercase()
+                                val senderLower = sender.lowercase()
+                                
+                                val isBankSender = bankKeywords.any { senderLower.contains(it) }
+                                val isTransactional = transactionalKeywords.any { content.contains(it) }
+                                
+                                isBankSender && !isTransactional
+                            } catch (e: Exception) {
+                                false
+                            }
+                        }
+                    }.awaitAll().count { it }
+                }
+            } else {
+                val listResponse = service.listMessages(maxResults = 500, labelIds = labelIds, query = query)
+                return listResponse.messages?.size ?: 0
+            }
+        } catch (e: Exception) {
+            Log.e("EmailRepository", "Error fetching cleanup count", e)
+            return 0
+        }
+    }
+
+    private fun isBankAd(email: EmailUI): Boolean {
+        if (email.category != "Finance") return false
+        val transactionalKeywords = listOf("statement", "bill", "invoice", "transaction", "alert", "otp", "debit", "credit", "payment", "received", "sent")
+        val content = (email.subject + " " + email.snippet).lowercase()
+        return !transactionalKeywords.any { content.contains(it) }
     }
 }
