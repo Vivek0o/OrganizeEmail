@@ -16,6 +16,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
@@ -230,7 +232,7 @@ class MainActivity : ComponentActivity() {
                             },
                             title = category,
                             onSenderClick = { key ->
-                                navController.navigate("sender_list/$key")
+                                navController.navigate("sender_list/$key?category=$category")
                             },
                             showCategories = false,
                             showAllEmails = false,
@@ -239,9 +241,23 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    composable("sender_list/{key}") { backStackEntry ->
+                    composable(
+                        route = "sender_list/{key}?category={category}",
+                        arguments = listOf(
+                            navArgument("key") { type = NavType.StringType },
+                            navArgument("category") {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            }
+                        )
+                    ) { backStackEntry ->
                         val key = backStackEntry.arguments?.getString("key") ?: ""
-                        val filtered = emails.filter { it.senderKey == key }
+                        val category = backStackEntry.arguments?.getString("category")
+                        
+                        val filtered = emails.filter { 
+                            it.senderKey == key && (category == null || it.category == category)
+                        }
                         EmailListScreen(
                             emails = filtered,
                             labels = emptyList(),
