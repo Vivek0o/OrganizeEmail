@@ -171,7 +171,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("label_list/{labelId}") { backStackEntry ->
                         val labelId = backStackEntry.arguments?.getString("labelId") ?: ""
-                        val labelName = labels.find { it.id == labelId }?.name ?: "Label"
+                        val labelName = if (labelId == "IMPORTANT") "Important" else labels.find { it.id == labelId }?.name ?: "Label"
                         
                         EmailListScreen(
                             emails = emails,

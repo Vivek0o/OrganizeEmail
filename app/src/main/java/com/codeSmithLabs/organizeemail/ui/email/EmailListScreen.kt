@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -217,6 +218,19 @@ fun EmailListScreen(
                                 )
                             }
                         }
+                    }
+
+                    item {
+                        NavigationDrawerItem(
+                            label = { Text("Important") },
+                            selected = false,
+                            onClick = {
+                                onLabelClick?.invoke("IMPORTANT")
+                                scope.launch { drawerState.close() }
+                            },
+                            icon = { Icon(Icons.Default.Star, contentDescription = null) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
                     }
                 }
 
