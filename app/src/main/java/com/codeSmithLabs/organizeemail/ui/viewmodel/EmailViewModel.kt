@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 
+import com.codeSmithLabs.organizeemail.data.model.CleanupCategoryStats
+
 class EmailViewModel(application: Application) : AndroidViewModel(application) {
     
     private val authClient = GoogleAuthClient(application)
@@ -46,16 +48,36 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     private val _heavyEmailCount = MutableStateFlow(0)
     val heavyEmailCount = _heavyEmailCount.asStateFlow()
     
+    private val _cleanupStats = MutableStateFlow(CleanupCategoryStats(0, 0, 0))
+    val cleanupStats = _cleanupStats.asStateFlow()
+    
     fun refreshCleanupStats() {
         viewModelScope.launch {
              try {
-                 val promoDeferred = async { repository.getCleanupCount("promotional") }
-                 val bankDeferred = async { repository.getCleanupCount("bank_ads") }
-                 val heavyDeferred = async { repository.getCleanupCount("heavy") }
+                 val promoDeferred = async { repository.getCleanupStats("promotional") }
+                 val bankDeferred = async { repository.getCleanupStats("bank_ads") }
+                 val heavyDeferred = async { repository.getCleanupStats("heavy") }
 
-                 _promotionalCount.value = promoDeferred.await()
-                 _bankAdCount.value = bankDeferred.await()
-                 _heavyEmailCount.value = heavyDeferred.await()
+                 val pStats = promoDeferred.await()
+                 val bStats = bankDeferred.await()
+                 val hStats = heavyDeferred.await()
+
+                 _promotionalCount.value = pStats.count
+                 _bankAdCount.value = bStats.count
+                 _heavyEmailCount.value = hStats.count
+                 
+                 val totalCount = pStats.count + bStats.count + hStats.count
+                 val totalSize = pStats.sizeBytes + bStats.sizeBytes + hStats.sizeBytes
+                 val totalAttachments = pStats.attachmentCount + bStats.attachmentCount + hStats.attachmentCount
+                 
+                 _cleanupStats.value = CleanupCategoryStats(totalCount, totalSize, totalAttachments)
+                 
+                 // Cache the new stats (counts only for now)
+                 repository.saveCleanupStats(mapOf(
+                     "promotional" to pStats.count,
+                     "bank_ads" to bStats.count,
+                     "heavy" to hStats.count
+                 ))
              } catch (e: Exception) {
                  Log.e("EmailViewModel", "Error refreshing cleanup stats", e)
              }
@@ -65,16 +87,27 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     fun fetchCleanupEmails(type: String) {
         fetchJob?.cancel()
         
-        _loading.value = true
         _error.value = null
-        _emails.value = emptyList()
         
-        viewModelScope.launch {
+        fetchJob = viewModelScope.launch {
+            // 1. Try Cache
+            val cached = repository.getEmailsFromCache(type)
+            if (cached.isNotEmpty()) {
+                _emails.value = cached
+            } else {
+                _loading.value = true
+                _emails.value = emptyList()
+            }
+            
+            // 2. Fetch Network
             try {
                 val emails = repository.getCleanupEmails(type)
                 _emails.value = emails
+                repository.saveEmailsToCache(emails, type)
             } catch (e: Exception) {
-                 _error.value = "Failed to load emails: ${e.message}"
+                 if (_emails.value.isEmpty()) {
+                     _error.value = "Failed to load emails: ${e.message}"
+                 }
             } finally {
                 _loading.value = false
             }
@@ -142,10 +175,36 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                 if (cachedLabels.isNotEmpty()) {
                     _labels.value = cachedLabels
                 }
+                
+                // Load cached cleanup stats
+                val cachedStats = repository.getCleanupStats()
+                if (cachedStats.isNotEmpty()) {
+                    _promotionalCount.value = cachedStats["promotional"] ?: 0
+                    _bankAdCount.value = cachedStats["bank_ads"] ?: 0
+                    _heavyEmailCount.value = cachedStats["heavy"] ?: 0
+                }
 
                 // Trigger sync
                 fetchEmails(isSync = true)
                 refreshCleanupStats()
+                
+                // Pre-fetch cleanup categories in background
+                prefetchCleanupCategories()
+            }
+        }
+    }
+
+    private fun prefetchCleanupCategories() {
+        viewModelScope.launch(Dispatchers.IO) {
+            listOf("promotional", "bank_ads", "heavy").forEach { type ->
+                try {
+                    val emails = repository.getCleanupEmails(type)
+                    if (emails.isNotEmpty()) {
+                        repository.saveEmailsToCache(emails, type)
+                    }
+                } catch (e: Exception) {
+                    Log.e("EmailViewModel", "Prefetch failed for $type", e)
+                }
             }
         }
     }

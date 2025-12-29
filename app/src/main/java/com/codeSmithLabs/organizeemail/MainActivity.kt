@@ -336,11 +336,13 @@ class MainActivity : ComponentActivity() {
                         val promotionalCount by viewModel.promotionalCount.collectAsState()
                         val bankAdCount by viewModel.bankAdCount.collectAsState()
                         val heavyEmailCount by viewModel.heavyEmailCount.collectAsState()
+                        val cleanupStats by viewModel.cleanupStats.collectAsState()
                         
                         CleanupAssistantScreen(
                             promotionalCount = promotionalCount,
                             bankAdCount = bankAdCount,
                             heavyEmailCount = heavyEmailCount,
+                            cleanupStats = cleanupStats,
                             onBackClick = { navController.popBackStack() },
                             onCategoryClick = { type ->
                                 navController.navigate("cleanup_list/$type")

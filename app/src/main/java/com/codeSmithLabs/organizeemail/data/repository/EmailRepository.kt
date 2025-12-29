@@ -25,6 +25,7 @@ import android.os.Build
 import android.os.Environment
 import java.io.FileOutputStream
 import android.net.Uri
+import com.codeSmithLabs.organizeemail.data.model.CleanupCategoryStats
 
 class EmailRepository(
     private val authClient: GoogleAuthClient,
@@ -94,6 +95,37 @@ class EmailRepository(
                     Log.e("EmailRepository", "Failed to save attachment", e2)
                     null
                 }
+            }
+        }
+    }
+
+    suspend fun saveCleanupStats(stats: Map<String, Int>) {
+        withContext(Dispatchers.IO) {
+            try {
+                val prefs = context.getSharedPreferences("cleanup_stats", Context.MODE_PRIVATE)
+                val editor = prefs.edit()
+                stats.forEach { (key, value) ->
+                    editor.putInt(key, value)
+                }
+                editor.apply()
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error saving cleanup stats", e)
+            }
+        }
+    }
+
+    suspend fun getCleanupStats(): Map<String, Int> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val prefs = context.getSharedPreferences("cleanup_stats", Context.MODE_PRIVATE)
+                mapOf(
+                    "promotional" to prefs.getInt("promotional", 0),
+                    "bank_ads" to prefs.getInt("bank_ads", 0),
+                    "heavy" to prefs.getInt("heavy", 0)
+                )
+            } catch (e: Exception) {
+                Log.e("EmailRepository", "Error reading cleanup stats", e)
+                emptyMap()
             }
         }
     }
@@ -404,9 +436,31 @@ class EmailRepository(
         }
     }
 
-    suspend fun getCleanupCount(type: String): Int {
-        val account = authClient.getLastSignedInAccount() ?: return 0
-        val token = authClient.getAccessToken(account) ?: return 0
+    private val adKeywords by lazy { loadAdKeywords() }
+
+    private data class AdKeywords(
+        @com.google.gson.annotations.SerializedName("ad_keywords") val adKeywords: List<String>
+    )
+
+    private fun loadAdKeywords(): List<String> {
+        return try {
+            val inputStream = context.assets.open("bank_ad_keywords.json")
+            val size = inputStream.available()
+            val buffer = ByteArray(size)
+            inputStream.read(buffer)
+            inputStream.close()
+            val json = String(buffer, java.nio.charset.Charset.forName("UTF-8"))
+            val data = gson.fromJson(json, AdKeywords::class.java)
+            data.adKeywords.map { it.lowercase() }
+        } catch (e: Exception) {
+            Log.e("EmailRepository", "Error reading ad keywords", e)
+            emptyList()
+        }
+    }
+    
+    suspend fun getCleanupStats(type: String): CleanupCategoryStats {
+        val account = authClient.getLastSignedInAccount() ?: return CleanupCategoryStats(0, 0, 0)
+        val token = authClient.getAccessToken(account) ?: return CleanupCategoryStats(0, 0, 0)
         val service = RetrofitClient.getGmailService(token)
 
         val (labelIds, query) = when (type) {
@@ -422,6 +476,8 @@ class EmailRepository(
                 val messages = listResponse.messages ?: emptyList()
 
                 return withContext(Dispatchers.IO) {
+                    // Load keywords once
+                    val keywords = adKeywords
                     messages.map { summary ->
                         async {
                             try {
@@ -432,35 +488,74 @@ class EmailRepository(
                                 val snippet = msg.snippet ?: ""
                                 
                                 val bankKeywords = listOf("bank", "pay", "wallet", "card", "finance", "invest", "mutual", "fund", "stock", "insurance", "loan", "tax", "gst", "hdfc", "sbi", "axis", "icici", "kotak", "pnb", "bob", "paytm", "phonepe", "razorpay", "gpay", "googlepay", "cred", "zerodha", "groww", "upstox", "indmoney", "dhan", "navi")
-                                val transactionalKeywords = listOf("statement", "bill", "invoice", "transaction", "alert", "otp", "debit", "credit", "payment", "received", "sent")
                                 
                                 val content = (subject + " " + snippet).lowercase()
                                 val senderLower = sender.lowercase()
                                 
                                 val isBankSender = bankKeywords.any { senderLower.contains(it) }
-                                val isTransactional = transactionalKeywords.any { content.contains(it) }
+                                val hasAdContent = keywords.any { content.contains(it) }
                                 
-                                isBankSender && !isTransactional
+                                if (isBankSender && hasAdContent) {
+                                    val size = msg.sizeEstimate ?: 0
+                                    CleanupCategoryStats(1, size.toLong(), 0)
+                                } else {
+                                    CleanupCategoryStats(0, 0, 0)
+                                }
                             } catch (e: Exception) {
-                                false
+                                CleanupCategoryStats(0, 0, 0)
                             }
                         }
-                    }.awaitAll().count { it }
+                    }.awaitAll().fold(CleanupCategoryStats(0, 0, 0)) { acc, stats ->
+                        CleanupCategoryStats(
+                            acc.count + stats.count,
+                            acc.sizeBytes + stats.sizeBytes,
+                            acc.attachmentCount + stats.attachmentCount
+                        )
+                    }
+                }
+            } else if (type == "heavy") {
+                val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds, query = query)
+                val messages = listResponse.messages ?: emptyList()
+                
+                return withContext(Dispatchers.IO) {
+                    messages.map { summary ->
+                        async {
+                            try {
+                                val msg = service.getMessage(summary.id, format = "minimal")
+                                val size = msg.sizeEstimate ?: 0
+                                CleanupCategoryStats(1, size.toLong(), 1) // Assume 1 attachment per heavy email
+                            } catch (e: Exception) {
+                                CleanupCategoryStats(0, 0, 0)
+                            }
+                        }
+                    }.awaitAll().fold(CleanupCategoryStats(0, 0, 0)) { acc, stats ->
+                        CleanupCategoryStats(
+                            acc.count + stats.count,
+                            acc.sizeBytes + stats.sizeBytes,
+                            acc.attachmentCount + stats.attachmentCount
+                        )
+                    }
                 }
             } else {
                 val listResponse = service.listMessages(maxResults = 500, labelIds = labelIds, query = query)
-                return listResponse.messages?.size ?: 0
+                val fetchedCount = listResponse.messages?.size ?: 0
+                val estimatedTotal = listResponse.resultSizeEstimate
+                val count = if (fetchedCount < 500) fetchedCount else maxOf(fetchedCount, estimatedTotal)
+                
+                // Estimate size: 75KB per promotional email
+                val estimatedSize = count * 75 * 1024L
+                
+                return CleanupCategoryStats(count, estimatedSize, 0)
             }
         } catch (e: Exception) {
-            Log.e("EmailRepository", "Error fetching cleanup count", e)
-            return 0
+            Log.e("EmailRepository", "Error fetching cleanup stats", e)
+            return CleanupCategoryStats(0, 0, 0)
         }
     }
 
     private fun isBankAd(email: EmailUI): Boolean {
         if (email.category != "Finance") return false
-        val transactionalKeywords = listOf("statement", "bill", "invoice", "transaction", "alert", "otp", "debit", "credit", "payment", "received", "sent")
         val content = (email.subject + " " + email.snippet).lowercase()
-        return !transactionalKeywords.any { content.contains(it) }
+        return adKeywords.any { content.contains(it) }
     }
 }
