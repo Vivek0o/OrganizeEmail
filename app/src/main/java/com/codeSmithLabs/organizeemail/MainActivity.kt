@@ -84,12 +84,9 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("email_list") {
-                        // Ensure we are showing Inbox data when on the main screen
-                        LaunchedEffect(Unit) {
-                            // Only fetch if we are NOT already showing inbox (optimization)
-                            // But since fetchEmails handles cache efficiently, we can just call it with null
-                            viewModel.fetchEmails(labelId = null)
-                        }
+//                        LaunchedEffect(Unit) {
+//                            viewModel.fetchEmails(labelId = null)
+//                        }
 
                         if (user == null) {
                             navController.navigate("login") {
