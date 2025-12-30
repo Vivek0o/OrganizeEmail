@@ -24,7 +24,11 @@ import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
+import com.codeSmithLabs.organizeemail.ui.settings.PrivacyDataScreen
+import com.codeSmithLabs.organizeemail.ui.common.WebViewScreen
 import com.codeSmithLabs.organizeemail.ui.theme.OrganizeEmailTheme
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import com.codeSmithLabs.organizeemail.ui.viewmodel.EmailViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
@@ -327,6 +331,38 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("settings") {
                         SettingsScreen(
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onPrivacyClick = {
+                                navController.navigate("privacy_data")
+                            }
+                        )
+                    }
+                    composable("privacy_data") {
+                        PrivacyDataScreen(
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onPrivacyPolicyClick = {
+                                val url = URLEncoder.encode("https://vivek0o.github.io/privacy-policy.html", StandardCharsets.UTF_8.toString())
+                                navController.navigate("webview/Privacy Policy/$url")
+                            }
+                        )
+                    }
+                    composable(
+                        route = "webview/{title}/{url}",
+                        arguments = listOf(
+                            navArgument("title") { type = NavType.StringType },
+                            navArgument("url") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val title = backStackEntry.arguments?.getString("title") ?: "Web View"
+                        val url = backStackEntry.arguments?.getString("url") ?: ""
+                        
+                        WebViewScreen(
+                            url = url,
+                            title = title,
                             onBackClick = {
                                 navController.popBackStack()
                             }
