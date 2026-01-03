@@ -16,7 +16,7 @@ class GoogleAuthClient(private val context: Context) {
 
     private val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
         .requestEmail()
-        .requestScopes(Scope("https://www.googleapis.com/auth/gmail.readonly"))
+        .requestScopes(Scope("https://www.googleapis.com/auth/gmail.modify"))
         .build()
 
     private val googleSignInClient: GoogleSignInClient = GoogleSignIn.getClient(context, gso)
@@ -46,7 +46,7 @@ class GoogleAuthClient(private val context: Context) {
     suspend fun getAccessToken(account: GoogleSignInAccount): String? {
         return withContext(Dispatchers.IO) {
             try {
-                val scope = "oauth2:https://www.googleapis.com/auth/gmail.readonly"
+                val scope = "oauth2:https://www.googleapis.com/auth/gmail.modify"
                 GoogleAuthUtil.getToken(context, account.account!!, scope)
             } catch (e: Exception) {
                 e.printStackTrace()

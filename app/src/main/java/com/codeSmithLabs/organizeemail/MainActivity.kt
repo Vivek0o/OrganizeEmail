@@ -19,11 +19,16 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
+import com.codeSmithLabs.organizeemail.ui.cleanup.CleanupAssistantScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
+import com.codeSmithLabs.organizeemail.ui.settings.PrivacyDataScreen
+import com.codeSmithLabs.organizeemail.ui.common.WebViewScreen
 import com.codeSmithLabs.organizeemail.ui.theme.OrganizeEmailTheme
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import com.codeSmithLabs.organizeemail.ui.viewmodel.EmailViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
@@ -79,12 +84,9 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("email_list") {
-                        // Ensure we are showing Inbox data when on the main screen
-                        LaunchedEffect(Unit) {
-                            // Only fetch if we are NOT already showing inbox (optimization)
-                            // But since fetchEmails handles cache efficiently, we can just call it with null
-                            viewModel.fetchEmails(labelId = null)
-                        }
+//                        LaunchedEffect(Unit) {
+//                            viewModel.fetchEmails(labelId = null)
+//                        }
 
                         if (user == null) {
                             navController.navigate("login") {
@@ -124,8 +126,12 @@ class MainActivity : ComponentActivity() {
                             onSettingsClick = {
                                 navController.navigate("settings")
                             },
+                            onCleanupClick = {
+                                navController.navigate("cleanup_assistant")
+                            },
                             showCategories = true,
-                            showAllEmails = false
+                            showAllEmails = false,
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                     composable("smart_filter/{type}") { backStackEntry ->
@@ -166,12 +172,13 @@ class MainActivity : ComponentActivity() {
                             showAllEmails = false,
                             onBackClick = {
                                 navController.popBackStack()
-                            }
+                            },
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                     composable("label_list/{labelId}") { backStackEntry ->
                         val labelId = backStackEntry.arguments?.getString("labelId") ?: ""
-                        val labelName = labels.find { it.id == labelId }?.name ?: "Label"
+                        val labelName = if (labelId == "IMPORTANT") "Important" else labels.find { it.id == labelId }?.name ?: "Label"
                         
                         EmailListScreen(
                             emails = emails,
@@ -204,11 +211,18 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             },
+                            onSettingsClick = {
+                                navController.navigate("settings")
+                            },
+                            onCleanupClick = {
+                                navController.navigate("cleanup_assistant")
+                            },
                             showCategories = false,
                             showAllEmails = true,
                             onBackClick = {
                                 navController.popBackStack()
-                            }
+                            },
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                     composable("category_list/{category}") { backStackEntry ->
@@ -238,7 +252,8 @@ class MainActivity : ComponentActivity() {
                             showAllEmails = false,
                             onBackClick = {
                                 navController.popBackStack()
-                            }
+                            },
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                     composable(
@@ -279,7 +294,8 @@ class MainActivity : ComponentActivity() {
                             showAllEmails = true,
                             onBackClick = {
                                 navController.popBackStack()
-                            }
+                            },
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                     composable("email_detail") {
@@ -300,6 +316,13 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 }
+                            },
+                            onDeleteClick = {
+                                selectedEmail?.let { email ->
+                                    viewModel.deleteEmail(email.id)
+                                    Toast.makeText(context, "Email deleted", Toast.LENGTH_SHORT).show()
+                                    navController.popBackStack()
+                                }
                             }
                         )
                     }
@@ -307,7 +330,96 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             onBackClick = {
                                 navController.popBackStack()
+                            },
+                            onPrivacyClick = {
+                                navController.navigate("privacy_data")
                             }
+                        )
+                    }
+                    composable("privacy_data") {
+                        PrivacyDataScreen(
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onPrivacyPolicyClick = {
+                                val url = URLEncoder.encode("https://vivek0o.github.io/privacy-policy.html", StandardCharsets.UTF_8.toString())
+                                navController.navigate("webview/Privacy Policy/$url")
+                            }
+                        )
+                    }
+                    composable(
+                        route = "webview/{title}/{url}",
+                        arguments = listOf(
+                            navArgument("title") { type = NavType.StringType },
+                            navArgument("url") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val title = backStackEntry.arguments?.getString("title") ?: "Web View"
+                        val url = backStackEntry.arguments?.getString("url") ?: ""
+                        
+                        WebViewScreen(
+                            url = url,
+                            title = title,
+                            onBackClick = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable("cleanup_assistant") {
+                        val promotionalCount by viewModel.promotionalCount.collectAsState()
+                        val bankAdCount by viewModel.bankAdCount.collectAsState()
+                        val heavyEmailCount by viewModel.heavyEmailCount.collectAsState()
+                        val cleanupStats by viewModel.cleanupStats.collectAsState()
+                        
+                        CleanupAssistantScreen(
+                            promotionalCount = promotionalCount,
+                            bankAdCount = bankAdCount,
+                            heavyEmailCount = heavyEmailCount,
+                            cleanupStats = cleanupStats,
+                            onBackClick = { navController.popBackStack() },
+                            onCategoryClick = { type ->
+                                navController.navigate("cleanup_list/$type")
+                            }
+                        )
+                    }
+                    composable("cleanup_list/{type}") { backStackEntry ->
+                        val type = backStackEntry.arguments?.getString("type") ?: ""
+                        
+                        LaunchedEffect(type) {
+                            viewModel.fetchCleanupEmails(type)
+                        }
+                        
+                        val title = when (type) {
+                            "promotional" -> "Promotional Emails"
+                            "bank_ads" -> "Bank Advertisements"
+                            "heavy" -> "Heavy Emails"
+                            else -> "Cleanup"
+                        }
+                        
+                        EmailListScreen(
+                            emails = emails,
+                            labels = emptyList(),
+                            user = user,
+                            isLoading = isLoading,
+                            error = error,
+                            onEmailClick = { email ->
+                                selectedEmail = email
+                                navController.navigate("email_detail")
+                            },
+                            onSignOutClick = {
+                                viewModel.signOut()
+                                navController.navigate("login") {
+                                    popUpTo("email_list") { inclusive = true }
+                                }
+                            },
+                            title = title,
+                            onSenderClick = null,
+                            showCategories = false,
+                            showAllEmails = true,
+                            onBackClick = {
+                                navController.popBackStack()
+                            },
+                            onDeleteEmails = { viewModel.deleteEmails(it) }
                         )
                     }
                 }

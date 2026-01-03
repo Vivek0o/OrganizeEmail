@@ -19,6 +19,7 @@ data class GmailMessage(
     @SerializedName("labelIds") val labelIds: List<String>?,
     @SerializedName("snippet") val snippet: String?,
     @SerializedName("payload") val payload: MessagePart?,
+    @SerializedName("sizeEstimate") val sizeEstimate: Int?,
     @SerializedName("internalDate") val internalDate: Long
 )
 
@@ -73,4 +74,16 @@ data class GmailLabel(
     @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
     @SerializedName("type") val type: String
+)
+
+data class BatchModifyRequest(
+    @SerializedName("ids") val ids: List<String>,
+    @SerializedName("addLabelIds") val addLabelIds: List<String> = emptyList(),
+    @SerializedName("removeLabelIds") val removeLabelIds: List<String> = emptyList()
+)
+
+data class CleanupCategoryStats(
+    val count: Int,
+    val sizeBytes: Long,
+    val attachmentCount: Int
 )

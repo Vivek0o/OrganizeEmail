@@ -1,9 +1,12 @@
 package com.codeSmithLabs.organizeemail.data.remote
 
+import com.codeSmithLabs.organizeemail.data.model.BatchModifyRequest
 import com.codeSmithLabs.organizeemail.data.model.GmailLabelListResponse
 import com.codeSmithLabs.organizeemail.data.model.GmailMessage
 import com.codeSmithLabs.organizeemail.data.model.GmailMessageListResponse
+import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -29,4 +32,14 @@ interface GmailApiService {
         @Path("messageId") messageId: String,
         @Path("id") id: String
     ): com.codeSmithLabs.organizeemail.data.model.MessageBody
+
+    @retrofit2.http.POST("gmail/v1/users/me/messages/{id}/trash")
+    suspend fun trashMessage(
+        @Path("id") id: String
+    ): GmailMessage
+
+    @POST("gmail/v1/users/me/messages/batchModify")
+    suspend fun batchModify(
+        @Body request: BatchModifyRequest
+    ): Unit
 }
