@@ -21,6 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrivacyDataScreen(
@@ -31,19 +36,34 @@ fun PrivacyDataScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Privacy & Data") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                GradientBlueStart.copy(alpha = 0.5f),
+                                GradientBlueEnd.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = { Text("Privacy & Data") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.Black,
+                        actionIconContentColor = Color.Black,
+                        navigationIconContentColor = Color.Black
+                    )
                 )
-            )
+            }
         }
     ) { padding ->
         Column(

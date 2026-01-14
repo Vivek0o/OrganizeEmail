@@ -1070,7 +1070,14 @@ fun LoadingSyncView() {
             modifier = Modifier
                 .size(80.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            GradientBlueStart.copy(alpha = 0.5f),
+                            GradientBlueEnd.copy(alpha = 0.2f)
+                        )
+                    )
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -1079,7 +1086,7 @@ fun LoadingSyncView() {
                 modifier = Modifier
                     .size(40.dp)
                     .graphicsLayer { this.alpha = alpha },
-                tint = MaterialTheme.colorScheme.primary
+                tint = Color.Black // Match toolbar icon color
             )
         }
         
@@ -1107,8 +1114,8 @@ fun LoadingSyncView() {
                 .width(200.dp)
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp)),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.primaryContainer
+            color = GradientBlueStart, // Match toolbar theme color
+            trackColor = GradientBlueEnd.copy(alpha = 0.3f)
         )
     }
 }
