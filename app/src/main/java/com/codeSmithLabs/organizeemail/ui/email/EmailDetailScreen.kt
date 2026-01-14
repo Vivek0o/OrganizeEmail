@@ -26,12 +26,15 @@ import java.util.Locale
 import java.util.TimeZone
 import com.codeSmithLabs.organizeemail.data.model.AttachmentUI
 
+import androidx.compose.material.icons.filled.Delete
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailDetailScreen(
     email: EmailUI?,
     onBackClick: () -> Unit,
-    onDownloadAttachment: ((AttachmentUI) -> Unit)? = null
+    onDownloadAttachment: ((AttachmentUI) -> Unit)? = null,
+    onDeleteClick: (() -> Unit)? = null
 ) {
     Scaffold(
         topBar = {
@@ -40,6 +43,13 @@ fun EmailDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (onDeleteClick != null) {
+                        IconButton(onClick = onDeleteClick) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
                     }
                 }
             )

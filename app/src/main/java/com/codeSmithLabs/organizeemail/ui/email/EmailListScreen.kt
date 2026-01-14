@@ -5,8 +5,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,11 +35,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,6 +62,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
@@ -83,6 +91,14 @@ import com.codeSmithLabs.organizeemail.ui.common.AppIcon
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.coroutines.launch
 
+import androidx.compose.ui.graphics.Brush
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkStart
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleStart
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailListScreen(
@@ -101,25 +117,40 @@ fun EmailListScreen(
     onBackClick: (() -> Unit)? = null,
     onLabelClick: ((String) -> Unit)? = null,
     onSmartFilterClick: ((String) -> Unit)? = null,
-    onSettingsClick: (() -> Unit)? = null
+    onSettingsClick: (() -> Unit)? = null,
+    onCleanupClick: (() -> Unit)? = null,
+    onDeleteEmails: ((List<String>) -> Unit)? = null
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Selection Mode State
+    var selectedEmailIds by remember { mutableStateOf(emptySet<String>()) }
+    val isSelectionMode = selectedEmailIds.isNotEmpty()
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier.width(300.dp),
+                drawerContainerColor = Color.White
             ) {
                 // Profile Section
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    GradientBlueStart.copy(alpha = 0.5f),
+                                    GradientBlueEnd.copy(alpha = 0.2f)
+                                )
+                            )
+                        )
                         .padding(24.dp)
                 ) {
-                    if (user?.photoUrl != null) {
+                    Column {
+                        if (user?.photoUrl != null) {
                         AsyncImage(
                             model = user.photoUrl,
                             contentDescription = "Profile",
@@ -154,6 +185,7 @@ fun EmailListScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
+                    }
                 }
 
                 HorizontalDivider()
@@ -218,6 +250,32 @@ fun EmailListScreen(
                             }
                         }
                     }
+
+                    item {
+                        NavigationDrawerItem(
+                            label = { Text("Important") },
+                            selected = false,
+                            onClick = {
+                                onLabelClick?.invoke("IMPORTANT")
+                                scope.launch { drawerState.close() }
+                            },
+                            icon = { Icon(Icons.Default.Star, contentDescription = null) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+
+                    item {
+                        NavigationDrawerItem(
+                            label = { Text("Cleanup Assistant") },
+                            selected = false,
+                            onClick = {
+                                onCleanupClick?.invoke()
+                                scope.launch { drawerState.close() }
+                            },
+                            icon = { Icon(Icons.Default.Build, contentDescription = null) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
                 }
 
                 HorizontalDivider()
@@ -247,28 +305,67 @@ fun EmailListScreen(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text(if (showCategories) "OrganizeEmail" else title) },
-                    navigationIcon = {
-                        if (onBackClick != null) {
-                            IconButton(onClick = onBackClick) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                if (isSelectionMode) {
+                    TopAppBar(
+                        title = { Text("${selectedEmailIds.size} Selected") },
+                        navigationIcon = {
+                            IconButton(onClick = { selectedEmailIds = emptySet() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close Selection")
                             }
-                        } else if (onCategoryClick != null || onSenderClick != null && showCategories) { // Show Menu on main/category screen
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        actions = {
+                            TextButton(onClick = {
+                                if (selectedEmailIds.size == emails.size) {
+                                    selectedEmailIds = emptySet()
+                                } else {
+                                    selectedEmailIds = emails.map { it.id }.toSet()
+                                }
+                            }) {
+                                Text(
+                                    text = if (selectedEmailIds.size == emails.size) "Deselect All" else "Select All",
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            
+                            if (onDeleteEmails != null) {
+                                IconButton(onClick = {
+                                    onDeleteEmails(selectedEmailIds.toList())
+                                    selectedEmailIds = emptySet()
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Selected")
+                                }
                             }
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    actions = {
-                        // Removed direct logout from top bar, moved to drawer
-                    }
-                )
+                    )
+                } else {
+                    TopAppBar(
+                        title = { Text(if (showCategories) "OrganizeEmail" else title) },
+                        navigationIcon = {
+                            if (onBackClick != null) {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            } else if (onCategoryClick != null || onSenderClick != null && showCategories) { // Show Menu on main/category screen
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        actions = {
+                            // Removed direct logout from top bar, moved to drawer
+                        }
+                    )
+                }
             },
             containerColor = MaterialTheme.colorScheme.background
         ) { padding ->
@@ -296,7 +393,24 @@ fun EmailListScreen(
                         } else {
                             LazyColumn {
                                 items(emails) { email ->
-                                    EmailItem(email, onClick = { onEmailClick(email) })
+                                    val isSelected = selectedEmailIds.contains(email.id)
+                                    EmailItem(
+                                        email = email,
+                                        isSelected = isSelected,
+                                        inSelectionMode = isSelectionMode,
+                                        onClick = {
+                                            if (isSelectionMode) {
+                                                selectedEmailIds = if (isSelected) selectedEmailIds - email.id else selectedEmailIds + email.id
+                                            } else {
+                                                onEmailClick(email)
+                                            }
+                                        },
+                                        onLongClick = {
+                                            if (!isSelectionMode) {
+                                                selectedEmailIds = selectedEmailIds + email.id
+                                            }
+                                        }
+                                    )
                                     HorizontalDivider()
                                 }
                             }
@@ -460,7 +574,7 @@ fun SmartFilterCard(
 
 @Composable
 fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
-    val color = getCategoryColor(category)
+    val gradientColors = getCategoryGradient(category)
     val senders = remember(emails) {
         emails.distinctBy { it.senderKey }.take(4)
     }
@@ -469,39 +583,67 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().aspectRatio(1.2f),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Gradient Background with low alpha
             Box(
                 modifier = Modifier
-                    .width(80.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = gradientColors.map { it.copy(alpha = 0.15f) }
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                CategoryIconGrid(senders = senders)
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(64.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                             brush = Brush.linearGradient(colors = gradientColors)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CategoryIconGrid(senders = senders)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${emails.size} Emails",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = category,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${emails.size} Emails",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
+    }
+}
+
+fun getCategoryGradient(category: String): List<Color> {
+    return when (category) {
+        "Finance" -> listOf(Color(0xFF43A047), Color(0xFF66BB6A)) // Green
+        "Jobs" -> listOf(Color(0xFF1976D2), Color(0xFF42A5F5)) // Blue
+        "Shopping" -> listOf(Color(0xFFFB8C00), Color(0xFFFFB74D)) // Orange
+        "Travel" -> listOf(Color(0xFF00ACC1), Color(0xFF26C6DA)) // Cyan
+        "Social" -> listOf(Color(0xFFD81B60), Color(0xFFEC407A)) // Pink
+        "Tech" -> listOf(Color(0xFF546E7A), Color(0xFF78909C)) // Blue Grey
+        "Entertainment" -> listOf(Color(0xFF8E24AA), Color(0xFFAB47BC)) // Purple
+        else -> listOf(Color(0xFF757575), Color(0xFF9E9E9E)) // Grey
     }
 }
 
@@ -618,6 +760,7 @@ fun SenderAvatar(
 }
 
 fun getCategoryColor(category: String): Color {
+    // Deprecated in favor of gradients, but kept for compatibility if needed elsewhere
     return when (category) {
         "Finance" -> Color(0xFF4CAF50) // Green
         "Jobs" -> Color(0xFF2196F3) // Blue
@@ -714,48 +857,76 @@ fun SenderCard(name: String, domain: String?, count: Int, onClick: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun EmailItem(email: EmailUI, onClick: () -> Unit) {
+fun EmailItem(
+    email: EmailUI,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
+) {
     val senderName = email.sender.substringBefore("<").trim()
     val randomColor = remember(email.senderKey) { getColorForName(email.senderKey) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else Color.Transparent)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        // Sender Avatar (Favicon or Initials)
-        if (email.senderDomain != null) {
-            AsyncImage(
-                model = "https://www.google.com/s2/favicons?domain=${email.senderDomain}&sz=64",
-                contentDescription = senderName,
+        // Selection Indicator or Sender Avatar
+        if (isSelected) {
+            Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Crop,
-                error = rememberVectorPainter(Icons.Default.AccountCircle) // Fallback handled by AsyncImage? No, explicit fallback needed usually but AsyncImage handles nulls
-            )
-        } else {
-             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(randomColor),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = senderName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.onPrimary
                 )
+            }
+        } else {
+            // Existing Avatar Logic
+            if (email.senderDomain != null) {
+                AsyncImage(
+                    model = "https://www.google.com/s2/favicons?domain=${email.senderDomain}&sz=64",
+                    contentDescription = senderName,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Crop,
+                    error = rememberVectorPainter(Icons.Default.AccountCircle)
+                )
+            } else {
+                 Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(randomColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = senderName.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Email Content
+        // Email Content (Same as before)
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

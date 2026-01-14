@@ -10,13 +10,33 @@ val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
-// New Light Theme Colors
-val LightPrimary = Color(0xFF1976D2)
-val LightOnPrimary = Color(0xFFFFFFFF)
-val LightPrimaryContainer = Color(0xFFBBDEFB)
-val LightOnPrimaryContainer = Color(0xFF0D47A1)
-val LightBackground = Color(0xFFF5F5F5)
-val LightSurface = Color(0xFFFFFFFF)
-val LightOnSurface = Color(0xFF1C1B1F)
-val LightSecondaryContainer = Color(0xFFE3F2FD)
-val LightOnSecondaryContainer = Color(0xFF1565C0)
+// Professional Gradient / Pastel Theme Colors
+val PrimaryBlue = Color(0xFF4285F4)
+val SecondaryPurple = Color(0xFFA18CD1)
+val AccentPink = Color(0xFFFF9A9E)
+val SoftBackground = Color(0xFFFFFFFF) // Pure White
+val SurfaceWhite = Color(0xFFFFFFFF)
+
+// Gradient Colors (Publicly accessible)
+val GradientPinkStart = Color(0xFFFF9A9E)
+val GradientPinkEnd = Color(0xFFFECFEF)
+val GradientPurpleStart = Color(0xFFA18CD1)
+val GradientPurpleEnd = Color(0xFFFBC2EB)
+val GradientBlueStart = Color(0xFF84FAB0)
+val GradientBlueEnd = Color(0xFF8FD3F4)
+
+val TextPrimary = Color(0xFF1C1B1F)
+val TextSecondary = Color(0xFF49454F)
+
+// New Light Theme Colors Mapping
+val AppPrimary = PrimaryBlue
+val AppOnPrimary = Color.White
+val AppPrimaryContainer = Color(0xFFE3F2FD) // Very light blue
+val AppOnPrimaryContainer = Color(0xFF1976D2)
+val AppSecondary = SecondaryPurple
+val AppOnSecondary = Color.White
+val AppSecondaryContainer = Color(0xFFF3E5F5) // Very light purple
+val AppOnSecondaryContainer = Color(0xFF7B1FA2)
+val AppBackground = SoftBackground
+val AppSurface = SurfaceWhite
+val AppOnSurface = TextPrimary

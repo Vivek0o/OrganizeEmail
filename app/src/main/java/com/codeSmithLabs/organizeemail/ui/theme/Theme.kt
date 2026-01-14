@@ -12,22 +12,23 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    onPrimary = LightOnPrimary,
-    primaryContainer = LightPrimaryContainer,
-    onPrimaryContainer = LightOnPrimaryContainer,
-    secondary = PurpleGrey40,
-    secondaryContainer = LightSecondaryContainer,
-    onSecondaryContainer = LightOnSecondaryContainer,
-    tertiary = Pink40,
-    background = LightBackground,
-    surface = LightSurface,
-    onSurface = LightOnSurface
+    primary = AppPrimary,
+    onPrimary = AppOnPrimary,
+    primaryContainer = AppPrimaryContainer,
+    onPrimaryContainer = AppOnPrimaryContainer,
+    secondary = AppSecondary,
+    onSecondary = AppOnSecondary,
+    secondaryContainer = AppSecondaryContainer,
+    onSecondaryContainer = AppOnSecondaryContainer,
+    tertiary = AccentPink,
+    background = AppBackground,
+    surface = AppSurface,
+    onSurface = AppOnSurface
 )
 
 @Composable
 fun OrganizeEmailTheme(
-    darkTheme: Boolean = false, // Force Light Theme
+    darkTheme: Boolean = false, // Force Light Theme for now to maintain the clean look
     dynamicColor: Boolean = false, // Disable dynamic color to enforce our branding
     content: @Composable () -> Unit
 ) {
