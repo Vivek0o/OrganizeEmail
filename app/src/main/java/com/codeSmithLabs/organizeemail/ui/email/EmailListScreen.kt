@@ -91,6 +91,14 @@ import com.codeSmithLabs.organizeemail.ui.common.AppIcon
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.coroutines.launch
 
+import androidx.compose.ui.graphics.Brush
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkStart
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleStart
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailListScreen(
@@ -124,16 +132,25 @@ fun EmailListScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet(
-                modifier = Modifier.width(300.dp)
+                modifier = Modifier.width(300.dp),
+                drawerContainerColor = Color.White
             ) {
                 // Profile Section
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    GradientBlueStart.copy(alpha = 0.5f),
+                                    GradientBlueEnd.copy(alpha = 0.2f)
+                                )
+                            )
+                        )
                         .padding(24.dp)
                 ) {
-                    if (user?.photoUrl != null) {
+                    Column {
+                        if (user?.photoUrl != null) {
                         AsyncImage(
                             model = user.photoUrl,
                             contentDescription = "Profile",
@@ -168,6 +185,7 @@ fun EmailListScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
+                    }
                 }
 
                 HorizontalDivider()
@@ -556,7 +574,7 @@ fun SmartFilterCard(
 
 @Composable
 fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
-    val color = getCategoryColor(category)
+    val gradientColors = getCategoryGradient(category)
     val senders = remember(emails) {
         emails.distinctBy { it.senderKey }.take(4)
     }
@@ -565,39 +583,67 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().aspectRatio(1.2f),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Gradient Background with low alpha
             Box(
                 modifier = Modifier
-                    .width(80.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(color.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = gradientColors.map { it.copy(alpha = 0.15f) }
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                CategoryIconGrid(senders = senders)
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(64.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                             brush = Brush.linearGradient(colors = gradientColors)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CategoryIconGrid(senders = senders)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${emails.size} Emails",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = category,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${emails.size} Emails",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
+    }
+}
+
+fun getCategoryGradient(category: String): List<Color> {
+    return when (category) {
+        "Finance" -> listOf(Color(0xFF43A047), Color(0xFF66BB6A)) // Green
+        "Jobs" -> listOf(Color(0xFF1976D2), Color(0xFF42A5F5)) // Blue
+        "Shopping" -> listOf(Color(0xFFFB8C00), Color(0xFFFFB74D)) // Orange
+        "Travel" -> listOf(Color(0xFF00ACC1), Color(0xFF26C6DA)) // Cyan
+        "Social" -> listOf(Color(0xFFD81B60), Color(0xFFEC407A)) // Pink
+        "Tech" -> listOf(Color(0xFF546E7A), Color(0xFF78909C)) // Blue Grey
+        "Entertainment" -> listOf(Color(0xFF8E24AA), Color(0xFFAB47BC)) // Purple
+        else -> listOf(Color(0xFF757575), Color(0xFF9E9E9E)) // Grey
     }
 }
 
@@ -714,6 +760,7 @@ fun SenderAvatar(
 }
 
 fun getCategoryColor(category: String): Color {
+    // Deprecated in favor of gradients, but kept for compatibility if needed elsewhere
     return when (category) {
         "Finance" -> Color(0xFF4CAF50) // Green
         "Jobs" -> Color(0xFF2196F3) // Blue

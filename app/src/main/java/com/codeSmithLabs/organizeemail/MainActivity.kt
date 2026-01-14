@@ -7,6 +7,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +28,7 @@ import com.codeSmithLabs.organizeemail.ui.cleanup.CleanupAssistantScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
+import com.codeSmithLabs.organizeemail.ui.onboarding.OnboardingActivity
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
 import com.codeSmithLabs.organizeemail.ui.settings.PrivacyDataScreen
 import com.codeSmithLabs.organizeemail.ui.common.WebViewScreen
@@ -71,17 +77,35 @@ class MainActivity : ComponentActivity() {
                     startDestination = if (user == null) "login" else "email_list"
                 ) {
                     composable("login") {
-                        if (user != null) {
-                            navController.navigate("email_list") {
-                                popUpTo("login") { inclusive = true }
-                            }
+                        val context = LocalContext.current
+                        
+                        // Handle navigation side-effects only once
+                        LaunchedEffect(user) {
+                             if (user != null) {
+                                 // Launch OnboardingActivity
+                                 val intent = Intent(context, OnboardingActivity::class.java)
+                                 context.startActivity(intent)
+                                 
+                                 // Silently navigate to email_list in the background so back-stack is correct
+                                 navController.navigate("email_list") {
+                                     popUpTo("login") { inclusive = true }
+                                 }
+                             }
                         }
-                        LoginScreen(
-                            onSignInClick = {
-                                val signInIntent = viewModel.getAuthClient().getSignInIntent()
-                                signInLauncher.launch(signInIntent)
-                            }
-                        )
+
+                        // If user is null, show login screen. If user is NOT null, show empty box to prevent flicker
+                        // while the Activity transition happens.
+                        if (user == null) {
+                            LoginScreen(
+                                onSignInClick = {
+                                    val signInIntent = viewModel.getAuthClient().getSignInIntent()
+                                    signInLauncher.launch(signInIntent)
+                                }
+                            )
+                        } else {
+                            // Render nothing or a simple background while transition happens
+                            Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+                        }
                     }
                     composable("email_list") {
 //                        LaunchedEffect(Unit) {
