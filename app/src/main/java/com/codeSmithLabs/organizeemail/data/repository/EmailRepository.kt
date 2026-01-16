@@ -220,7 +220,10 @@ class EmailRepository(
         try {
             // 1. Fetch List of IDs
             val labelIds = if (labelId != null) listOf(labelId) else null
-            val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds)
+            val listResponse = service.listMessages(
+                maxResults = 500,
+                labelIds = labelIds
+            )
             val messages = listResponse.messages ?: emptyList()
 
             // 2. Fetch Details for each ID (Parallel)
@@ -254,15 +257,25 @@ class EmailRepository(
         val subject = headers?.find { it.name.equals("Subject", ignoreCase = true) }?.value ?: "(No Subject)"
         val snippet = message.snippet ?: ""
         
-        // Use the classifier model
-        val category = classifier.classify(sender, subject, snippet)
+        // Use Gmail labels to improve categorization
+        val labelIds = message.labelIds ?: emptyList()
+        
+        val category = if (labelIds.contains("CATEGORY_PROMOTIONS")) {
+             "Promotions"
+        } else if (labelIds.contains("CATEGORY_SOCIAL") || labelIds.contains("CATEGORY_FORUMS")) {
+             "Social"
+        } else {
+             // Fallback to local classifier
+             classifier.classify(sender, subject, snippet)
+        }
         
         val date = headers?.find { it.name.equals("Date", ignoreCase = true) }?.value ?: ""
         
         val body = getBodyFromMessage(message.payload)
         val attachments = getAttachmentsFromMessage(message.payload, message.id)
         
-        val isUnread = message.labelIds?.contains("UNREAD") == true
+        val isUnread = labelIds.contains("UNREAD")
+        val isImportant = labelIds.contains("IMPORTANT")
         val hasMeaningfulAttachment = attachments.any { isMeaningfulAttachment(it) }
 
         return EmailUI(
@@ -277,7 +290,9 @@ class EmailRepository(
             body = body,
             attachments = attachments,
             isUnread = isUnread,
-            hasMeaningfulAttachment = hasMeaningfulAttachment
+            hasMeaningfulAttachment = hasMeaningfulAttachment,
+            labels = labelIds,
+            isImportant = isImportant
         )
     }
 

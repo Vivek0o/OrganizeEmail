@@ -108,9 +108,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("email_list") {
-//                        LaunchedEffect(Unit) {
-//                            viewModel.fetchEmails(labelId = null)
-//                        }
+                        // Ensure we show "All Mail" when returning to the main screen
+                        LaunchedEffect(Unit) {
+                            viewModel.fetchEmails(labelId = null)
+                        }
 
                         if (user == null) {
                             navController.navigate("login") {

@@ -55,7 +55,9 @@ data class EmailUI(
     val body: String,
     val attachments: List<AttachmentUI> = emptyList(),
     val isUnread: Boolean = false,
-    val hasMeaningfulAttachment: Boolean = false
+    val hasMeaningfulAttachment: Boolean = false,
+    val labels: List<String> = emptyList(),
+    val isImportant: Boolean = false
 )
 
 data class AttachmentUI(

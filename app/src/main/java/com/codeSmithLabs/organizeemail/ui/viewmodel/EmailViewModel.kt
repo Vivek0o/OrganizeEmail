@@ -210,7 +210,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchEmails(isSync: Boolean = false, labelId: String? = null) {
-        val key = labelId ?: "INBOX"
+        val key = labelId ?: "ALL_MAIL"
 
         // Cancel previous fetch to avoid race conditions (e.g., background sync overwriting label fetch)
         fetchJob?.cancel()
