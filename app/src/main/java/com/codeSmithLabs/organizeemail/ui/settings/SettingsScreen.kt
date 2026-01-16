@@ -16,6 +16,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -28,19 +34,34 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                GradientBlueStart.copy(alpha = 0.5f),
+                                GradientBlueEnd.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = { Text("Settings") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.Black,
+                        actionIconContentColor = Color.Black,
+                        navigationIconContentColor = Color.Black
+                    )
                 )
-            )
+            }
         }
     ) { padding ->
         Column(

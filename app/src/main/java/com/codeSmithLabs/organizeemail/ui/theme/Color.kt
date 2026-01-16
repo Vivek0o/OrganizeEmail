@@ -22,8 +22,13 @@ val GradientPinkStart = Color(0xFFFF9A9E)
 val GradientPinkEnd = Color(0xFFFECFEF)
 val GradientPurpleStart = Color(0xFFA18CD1)
 val GradientPurpleEnd = Color(0xFFFBC2EB)
-val GradientBlueStart = Color(0xFF84FAB0)
+val GradientBlueStart = Color(0xFF7FEEA2)
 val GradientBlueEnd = Color(0xFF8FD3F4)
+
+// Vibrant Toolbar / Brand Gradient
+val BrandGradientStart = Color(0xFF4285F4) // Google Blue-ish
+val BrandGradientEnd = Color(0xFF9C27B0)   // Purple
+
 
 val TextPrimary = Color(0xFF1C1B1F)
 val TextSecondary = Color(0xFF49454F)

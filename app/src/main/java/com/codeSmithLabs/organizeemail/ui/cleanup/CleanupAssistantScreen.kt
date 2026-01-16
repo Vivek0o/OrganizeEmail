@@ -18,6 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.filled.CheckCircle
 import com.codeSmithLabs.organizeemail.data.model.CleanupCategoryStats
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
+import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CleanupAssistantScreen(
@@ -35,19 +41,34 @@ fun CleanupAssistantScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Cleanup Assistant") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                GradientBlueStart.copy(alpha = 0.5f),
+                                GradientBlueEnd.copy(alpha = 0.2f)
+                            )
+                        )
+                    )
+                    .statusBarsPadding()
+            ) {
+                TopAppBar(
+                    title = { Text("Cleanup Assistant") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.Black,
+                        actionIconContentColor = Color.Black,
+                        navigationIconContentColor = Color.Black
+                    )
                 )
-            )
+            }
         }
     ) { padding ->
         Column(
