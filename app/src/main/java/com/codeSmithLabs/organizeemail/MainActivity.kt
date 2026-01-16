@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
                 val emails by viewModel.emails.collectAsState()
                 val labels by viewModel.labels.collectAsState()
                 val isLoading by viewModel.loading.collectAsState()
+                val syncProgress by viewModel.syncProgress.collectAsState()
                 val error by viewModel.error.collectAsState()
 
                 // State to hold the selected email for detail view
@@ -123,6 +124,7 @@ class MainActivity : ComponentActivity() {
                             labels = labels,
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress,
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -178,6 +180,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -210,6 +213,7 @@ class MainActivity : ComponentActivity() {
                             labels = labels,
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress,
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -258,6 +262,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -303,6 +308,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -426,6 +432,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress, // Cleanup list also uses main loading state
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email

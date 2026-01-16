@@ -211,7 +211,7 @@ class EmailRepository(
         }
     }
 
-    suspend fun getEmails(labelId: String? = null): List<EmailUI> {
+    suspend fun getEmails(labelId: String? = null, onProgress: ((Float) -> Unit)? = null): List<EmailUI> {
         val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
         val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
         
@@ -227,15 +227,25 @@ class EmailRepository(
             val messages = listResponse.messages ?: emptyList()
 
             // 2. Fetch Details for each ID (Parallel)
+            val total = messages.size
+            val completed = java.util.concurrent.atomic.AtomicInteger(0)
+
             return withContext(Dispatchers.IO) {
                 messages.map { summary ->
                     async {
                         try {
                             val fullMessage = service.getMessage(summary.id)
-                            mapToEmailUI(fullMessage)
+                            val result = mapToEmailUI(fullMessage)
+                            
+                            val current = completed.incrementAndGet()
+                            onProgress?.invoke(current.toFloat() / total)
+                            
+                            result
                         } catch (e: Exception) {
                             Log.e("EmailRepository", "Error fetching individual message: ${summary.id}", e)
                             e.printStackTrace()
+                            val current = completed.incrementAndGet()
+                            onProgress?.invoke(current.toFloat() / total)
                             null
                         }
                     }

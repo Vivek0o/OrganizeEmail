@@ -148,6 +148,9 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
 
+    private val _syncProgress = MutableStateFlow(0f)
+    val syncProgress = _syncProgress.asStateFlow()
+
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
 
@@ -225,6 +228,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
              if (!isSync) {
                  _emails.value = emptyList()
                  _loading.value = true
+                 _syncProgress.value = 0f
              }
              _error.value = null
         }
@@ -250,6 +254,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                     // Only show loader if we really have nothing
                     if (_emails.value.isEmpty()) {
                         _loading.value = true
+                        _syncProgress.value = 0f
                     }
                 }
             }
@@ -258,7 +263,11 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 coroutineScope {
                     // 3. Fetch new data in parallel
-                    val emailsDeferred = async { repository.getEmails(labelId) }
+                    val emailsDeferred = async { 
+                        repository.getEmails(labelId) { progress ->
+                            _syncProgress.value = progress
+                        }
+                    }
                     val labelsDeferred = async { repository.getLabels() }
 
                     val newEmails = emailsDeferred.await()
