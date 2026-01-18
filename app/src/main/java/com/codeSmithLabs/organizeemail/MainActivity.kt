@@ -42,6 +42,11 @@ import com.google.android.gms.common.api.ApiException
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+
 class MainActivity : ComponentActivity() {
     private val viewModel: EmailViewModel by viewModels()
 
@@ -67,10 +72,24 @@ class MainActivity : ComponentActivity() {
                 val emails by viewModel.emails.collectAsState()
                 val labels by viewModel.labels.collectAsState()
                 val isLoading by viewModel.loading.collectAsState()
+                val syncProgress by viewModel.syncProgress.collectAsState()
                 val error by viewModel.error.collectAsState()
 
                 // State to hold the selected email for detail view
                 var selectedEmail by remember { mutableStateOf<EmailUI?>(null) }
+
+                LaunchedEffect(user) {
+                    if (user == null) {
+                         // Safely check current destination
+                         val currentRoute = navController.currentDestination?.route
+                         if (currentRoute != "login") {
+                             navController.navigate("login") {
+                                 // Clear everything so back button doesn't go to email list
+                                 popUpTo(0) { inclusive = true }
+                             }
+                         }
+                    }
+                }
 
                 NavHost(
                     navController = navController,
@@ -108,20 +127,30 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("email_list") {
-//                        LaunchedEffect(Unit) {
-//                            viewModel.fetchEmails(labelId = null)
-//                        }
-
-                        if (user == null) {
-                            navController.navigate("login") {
-                                popUpTo("email_list") { inclusive = true }
+                        val lifecycleOwner = LocalLifecycleOwner.current
+                        DisposableEffect(lifecycleOwner) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                if (event == Lifecycle.Event.ON_RESUME) {
+                                    viewModel.fetchEmails(labelId = null)
+                                }
+                            }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose {
+                                lifecycleOwner.lifecycle.removeObserver(observer)
                             }
                         }
+                        
+                        // Ensure we show "All Mail" when returning to the main screen
+                        LaunchedEffect(Unit) {
+                            viewModel.fetchEmails(labelId = null)
+                        }
+
                         EmailListScreen(
                             emails = emails,
                             labels = labels,
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress,
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -129,9 +158,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = "OrganizeEmail",
                             onSenderClick = { key ->
@@ -177,6 +203,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -184,9 +211,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = title,
                             onSenderClick = { key ->
@@ -209,6 +233,7 @@ class MainActivity : ComponentActivity() {
                             labels = labels,
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress,
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -216,9 +241,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = labelName,
                             onSenderClick = { key ->
@@ -257,6 +279,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -264,9 +287,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = category,
                             onSenderClick = { key ->
@@ -302,6 +322,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = false,
+                            syncProgress = 0f,
                             error = null,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -309,9 +330,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = key,
                             onSenderClick = null,
@@ -425,6 +443,7 @@ class MainActivity : ComponentActivity() {
                             labels = emptyList(),
                             user = user,
                             isLoading = isLoading,
+                            syncProgress = syncProgress, // Cleanup list also uses main loading state
                             error = error,
                             onEmailClick = { email ->
                                 selectedEmail = email
@@ -432,9 +451,6 @@ class MainActivity : ComponentActivity() {
                             },
                             onSignOutClick = {
                                 viewModel.signOut()
-                                navController.navigate("login") {
-                                    popUpTo("email_list") { inclusive = true }
-                                }
                             },
                             title = title,
                             onSenderClick = null,

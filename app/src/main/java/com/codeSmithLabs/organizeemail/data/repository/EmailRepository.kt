@@ -211,7 +211,7 @@ class EmailRepository(
         }
     }
 
-    suspend fun getEmails(labelId: String? = null): List<EmailUI> {
+    suspend fun getEmails(labelId: String? = null, onProgress: ((Float) -> Unit)? = null): List<EmailUI> {
         val account = authClient.getLastSignedInAccount() ?: throw Exception("User not signed in")
         val token = authClient.getAccessToken(account) ?: throw Exception("Failed to get access token")
         
@@ -220,19 +220,32 @@ class EmailRepository(
         try {
             // 1. Fetch List of IDs
             val labelIds = if (labelId != null) listOf(labelId) else null
-            val listResponse = service.listMessages(maxResults = 100, labelIds = labelIds)
+            val listResponse = service.listMessages(
+                maxResults = 500,
+                labelIds = labelIds
+            )
             val messages = listResponse.messages ?: emptyList()
 
             // 2. Fetch Details for each ID (Parallel)
+            val total = messages.size
+            val completed = java.util.concurrent.atomic.AtomicInteger(0)
+
             return withContext(Dispatchers.IO) {
                 messages.map { summary ->
                     async {
                         try {
                             val fullMessage = service.getMessage(summary.id)
-                            mapToEmailUI(fullMessage)
+                            val result = mapToEmailUI(fullMessage)
+                            
+                            val current = completed.incrementAndGet()
+                            onProgress?.invoke(current.toFloat() / total)
+                            
+                            result
                         } catch (e: Exception) {
                             Log.e("EmailRepository", "Error fetching individual message: ${summary.id}", e)
                             e.printStackTrace()
+                            val current = completed.incrementAndGet()
+                            onProgress?.invoke(current.toFloat() / total)
                             null
                         }
                     }
@@ -254,15 +267,25 @@ class EmailRepository(
         val subject = headers?.find { it.name.equals("Subject", ignoreCase = true) }?.value ?: "(No Subject)"
         val snippet = message.snippet ?: ""
         
-        // Use the classifier model
-        val category = classifier.classify(sender, subject, snippet)
+        // Use Gmail labels to improve categorization
+        val labelIds = message.labelIds ?: emptyList()
+        
+        val category = if (labelIds.contains("CATEGORY_PROMOTIONS")) {
+             "Promotions"
+        } else if (labelIds.contains("CATEGORY_SOCIAL") || labelIds.contains("CATEGORY_FORUMS")) {
+             "Social"
+        } else {
+             // Fallback to local classifier
+             classifier.classify(sender, subject, snippet)
+        }
         
         val date = headers?.find { it.name.equals("Date", ignoreCase = true) }?.value ?: ""
         
         val body = getBodyFromMessage(message.payload)
         val attachments = getAttachmentsFromMessage(message.payload, message.id)
         
-        val isUnread = message.labelIds?.contains("UNREAD") == true
+        val isUnread = labelIds.contains("UNREAD")
+        val isImportant = labelIds.contains("IMPORTANT")
         val hasMeaningfulAttachment = attachments.any { isMeaningfulAttachment(it) }
 
         return EmailUI(
@@ -277,7 +300,9 @@ class EmailRepository(
             body = body,
             attachments = attachments,
             isUnread = isUnread,
-            hasMeaningfulAttachment = hasMeaningfulAttachment
+            hasMeaningfulAttachment = hasMeaningfulAttachment,
+            labels = labelIds,
+            isImportant = isImportant
         )
     }
 

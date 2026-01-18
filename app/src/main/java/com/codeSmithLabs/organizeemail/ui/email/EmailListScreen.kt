@@ -114,6 +114,7 @@ fun EmailListScreen(
     labels: List<GmailLabel> = emptyList(),
     user: GoogleSignInAccount? = null,
     isLoading: Boolean,
+    syncProgress: Float = 0f,
     error: String?,
     onEmailClick: (EmailUI) -> Unit,
     onSignOutClick: () -> Unit,
@@ -306,7 +307,10 @@ fun EmailListScreen(
                 NavigationDrawerItem(
                     label = { Text("Sign Out") },
                     selected = false,
-                    onClick = onSignOutClick,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onSignOutClick()
+                    },
                     icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
@@ -417,7 +421,7 @@ fun EmailListScreen(
                     )
             ) {
                 if (isLoading) {
-                    LoadingSyncView()
+                    LoadingSyncView(progress = syncProgress)
                 } else if (error != null) {
                     Text(
                         text = "Error: $error",
@@ -1054,7 +1058,7 @@ fun getColorForName(name: String): Color {
 }
 
 @Composable
-fun LoadingSyncView() {
+fun LoadingSyncView(progress: Float = 0f) {
     val infiniteTransition = rememberInfiniteTransition(label = "sync_pulse")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
@@ -1107,7 +1111,7 @@ fun LoadingSyncView() {
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Organizing your inbox",
+            text = "Organizing your inbox: ${(progress * 100).toInt()}%",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1115,12 +1119,13 @@ fun LoadingSyncView() {
         Spacer(modifier = Modifier.height(32.dp))
         
         LinearProgressIndicator(
+            progress = { progress },
             modifier = Modifier
                 .width(200.dp)
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp)),
             color = GradientBlueStart, // Match toolbar theme color
-            trackColor = GradientBlueEnd.copy(alpha = 0.3f)
+            trackColor = GradientBlueEnd.copy(alpha = 0.3f),
         )
     }
 }

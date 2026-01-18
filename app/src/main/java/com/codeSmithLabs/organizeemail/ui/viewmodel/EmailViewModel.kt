@@ -105,6 +105,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                 _emails.value = emails
                 repository.saveEmailsToCache(emails, type)
             } catch (e: Exception) {
+                 if (e is CancellationException) throw e
                  if (_emails.value.isEmpty()) {
                      _error.value = "Failed to load emails: ${e.message}"
                  }
@@ -147,6 +148,9 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _loading = MutableStateFlow(false)
     val loading = _loading.asStateFlow()
+
+    private val _syncProgress = MutableStateFlow(0f)
+    val syncProgress = _syncProgress.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error = _error.asStateFlow()
@@ -210,7 +214,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchEmails(isSync: Boolean = false, labelId: String? = null) {
-        val key = labelId ?: "INBOX"
+        val key = labelId ?: "ALL_MAIL"
 
         // Cancel previous fetch to avoid race conditions (e.g., background sync overwriting label fetch)
         fetchJob?.cancel()
@@ -225,6 +229,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
              if (!isSync) {
                  _emails.value = emptyList()
                  _loading.value = true
+                 _syncProgress.value = 0f
              }
              _error.value = null
         }
@@ -250,6 +255,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                     // Only show loader if we really have nothing
                     if (_emails.value.isEmpty()) {
                         _loading.value = true
+                        _syncProgress.value = 0f
                     }
                 }
             }
@@ -258,7 +264,11 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 coroutineScope {
                     // 3. Fetch new data in parallel
-                    val emailsDeferred = async { repository.getEmails(labelId) }
+                    val emailsDeferred = async { 
+                        repository.getEmails(labelId) { progress ->
+                            _syncProgress.value = progress
+                        }
+                    }
                     val labelsDeferred = async { repository.getLabels() }
 
                     val newEmails = emailsDeferred.await()
@@ -282,6 +292,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 e.printStackTrace()
                 Log.e("EmailViewModel", "Error fetching emails/labels", e)
                 // Only show error if we have no data to show
