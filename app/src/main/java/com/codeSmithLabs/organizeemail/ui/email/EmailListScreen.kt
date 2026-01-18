@@ -307,7 +307,10 @@ fun EmailListScreen(
                 NavigationDrawerItem(
                     label = { Text("Sign Out") },
                     selected = false,
-                    onClick = onSignOutClick,
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        onSignOutClick()
+                    },
                     icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )

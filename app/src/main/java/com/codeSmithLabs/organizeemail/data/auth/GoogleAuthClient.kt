@@ -11,6 +11,7 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.android.gms.tasks.Tasks
 
 class GoogleAuthClient(private val context: Context) {
 
@@ -26,7 +27,13 @@ class GoogleAuthClient(private val context: Context) {
     }
 
     suspend fun signOut() {
-        googleSignInClient.signOut()
+        withContext(Dispatchers.IO) {
+            try {
+                Tasks.await(googleSignInClient.signOut())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     fun getSignedInAccountFromIntent(data: Intent?): GoogleSignInAccount? {
