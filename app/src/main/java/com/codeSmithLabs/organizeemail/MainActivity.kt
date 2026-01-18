@@ -42,6 +42,11 @@ import com.google.android.gms.common.api.ApiException
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+
 class MainActivity : ComponentActivity() {
     private val viewModel: EmailViewModel by viewModels()
 
@@ -109,6 +114,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     composable("email_list") {
+                        val lifecycleOwner = LocalLifecycleOwner.current
+                        DisposableEffect(lifecycleOwner) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                if (event == Lifecycle.Event.ON_RESUME) {
+                                    viewModel.fetchEmails(labelId = null)
+                                }
+                            }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose {
+                                lifecycleOwner.lifecycle.removeObserver(observer)
+                            }
+                        }
+                        
                         // Ensure we show "All Mail" when returning to the main screen
                         LaunchedEffect(Unit) {
                             viewModel.fetchEmails(labelId = null)

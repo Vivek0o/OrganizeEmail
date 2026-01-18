@@ -105,6 +105,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
                 _emails.value = emails
                 repository.saveEmailsToCache(emails, type)
             } catch (e: Exception) {
+                 if (e is CancellationException) throw e
                  if (_emails.value.isEmpty()) {
                      _error.value = "Failed to load emails: ${e.message}"
                  }
@@ -291,6 +292,7 @@ class EmailViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 e.printStackTrace()
                 Log.e("EmailViewModel", "Error fetching emails/labels", e)
                 // Only show error if we have no data to show
