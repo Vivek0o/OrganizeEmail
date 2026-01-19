@@ -629,9 +629,6 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Gradient Background with low alpha - REMOVED per user request
-            // Kept plain white/transparent inside the card as container is already white
-
             Column(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -650,7 +647,7 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
                     CategoryIconGrid(senders = senders)
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
                     text = category,

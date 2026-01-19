@@ -3,20 +3,24 @@ package com.codeSmithLabs.organizeemail.ui.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import com.codeSmithLabs.organizeemail.R
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
-
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
@@ -73,7 +77,7 @@ fun SettingsScreen(
             Text(
                 text = "Sync Settings",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = Color.Black,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
@@ -119,35 +123,66 @@ fun SettingsScreen(
                     ) {
                         HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
                         
-                        Text(
-                            text = "Sync Frequency",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
+                        var expanded by remember { mutableStateOf(false) }
 
-                        val options = listOf(8, 12, 24)
-                        options.forEach { hours ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(enabled = isSyncEnabled) { 
-                                        viewModel.updateSyncFrequency(hours) 
-                                    }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = (frequency == hours),
-                                    onClick = { viewModel.updateSyncFrequency(hours) },
-                                    enabled = isSyncEnabled
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = isSyncEnabled) { expanded = !expanded }
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                             Column {
                                 Text(
-                                    text = "Every $hours hours",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = if (isSyncEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    text = "Sync Frequency",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.Black
                                 )
+                                if (!expanded) {
+                                    Text(
+                                        text = "Every $frequency hours",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                             }
+                             
+                             Icon(
+                                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (expanded) "Collapse" else "Expand",
+                                tint = Color.Black
+                             )
+                        }
+
+                        if (expanded) {
+                            val options = listOf(8, 12, 24)
+                            options.forEach { hours ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = isSyncEnabled) { 
+                                            viewModel.updateSyncFrequency(hours) 
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = (frequency == hours),
+                                        onClick = { viewModel.updateSyncFrequency(hours) },
+                                        enabled = isSyncEnabled,
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = MaterialTheme.colorScheme.primary,
+                                            unselectedColor = Color.Black.copy(alpha = 0.6f)
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Text(
+                                        text = "Every $hours hours",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.Black
+                                    )
+                                }
                             }
                         }
                     }
@@ -159,7 +194,7 @@ fun SettingsScreen(
             Text(
                 text = "About",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = Color.Black,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -179,9 +214,9 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(android.R.drawable.ic_secure),
+                        painter = painterResource(R.drawable.ic_privacy),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
