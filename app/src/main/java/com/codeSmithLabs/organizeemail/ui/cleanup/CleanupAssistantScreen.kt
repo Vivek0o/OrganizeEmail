@@ -14,10 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
 import androidx.compose.material.icons.filled.CheckCircle
 import com.codeSmithLabs.organizeemail.data.model.CleanupCategoryStats
-
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -36,9 +34,6 @@ fun CleanupAssistantScreen(
 ) {
     var showCleanupComplete by remember { mutableStateOf(false) }
     
-    // Reset complete state when stats change significanly (e.g. back to 0?)
-    // For now, let's keep it simple.
-
     Scaffold(
         topBar = {
             Box(
@@ -86,8 +81,7 @@ fun CleanupAssistantScreen(
                 CleanupPreviewCard(
                     stats = cleanupStats,
                     onCleanupClick = { 
-                        // For now, just show complete state as we don't have "Delete All" logic yet
-                        showCleanupComplete = true 
+                        showCleanupComplete = true
                     }
                 )
             }
@@ -130,11 +124,19 @@ fun CleanupPreviewCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = Color.Transparent
         )
     ) {
         Column(
             modifier = Modifier
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            GradientBlueStart.copy(alpha = 0.1f),
+                            GradientBlueEnd.copy(alpha = 0.1f)
+                        )
+                    )
+                )
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
@@ -142,22 +144,22 @@ fun CleanupPreviewCard(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = Color.Black
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     "Cleanup Preview",
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = Color.Black,
                     fontWeight = FontWeight.Bold
                 )
             }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            StatRow("Emails to delete", String.format("%,d", stats.count))
-            StatRow("Attachments found", String.format("%,d", stats.attachmentCount))
-            StatRow("Estimated space to free", "~" + formatFileSize(stats.sizeBytes))
+            StatRow("Emails to delete", String.format("%,d", stats.count), Color.Black)
+            StatRow("Attachments found", String.format("%,d", stats.attachmentCount), Color.Black)
+            StatRow("Estimated space to free", "~" + formatFileSize(stats.sizeBytes), Color.Black)
             
             /* 
             // Button hidden for now as we don't have bulk delete logic yet
@@ -219,7 +221,11 @@ fun CleanupCompleteCard(
 }
 
 @Composable
-fun StatRow(label: String, value: String) {
+fun StatRow(
+    label: String,
+    value: String,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimary
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -229,13 +235,13 @@ fun StatRow(label: String, value: String) {
         Text(
             label,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+            color = contentColor.copy(alpha = 0.9f)
         )
         Text(
             value,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onPrimary
+            color = contentColor
         )
     }
 }

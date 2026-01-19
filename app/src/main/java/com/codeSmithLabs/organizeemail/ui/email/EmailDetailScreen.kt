@@ -15,19 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
-
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.viewinterop.AndroidView
-
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 import com.codeSmithLabs.organizeemail.data.model.AttachmentUI
-
 import androidx.compose.material.icons.filled.Delete
-
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
