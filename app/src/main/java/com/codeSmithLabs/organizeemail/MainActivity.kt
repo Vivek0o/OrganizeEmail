@@ -27,6 +27,7 @@ import com.codeSmithLabs.organizeemail.data.model.EmailUI
 import com.codeSmithLabs.organizeemail.ui.cleanup.CleanupAssistantScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
+import com.codeSmithLabs.organizeemail.ui.search.SearchScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
 import com.codeSmithLabs.organizeemail.ui.onboarding.OnboardingActivity
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
@@ -172,6 +173,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onSmartFilterClick = { type ->
                                 navController.navigate("smart_filter/$type")
+                            },
+                            onSearchClick = {
+                                navController.navigate("search")
                             },
                             onSettingsClick = {
                                 navController.navigate("settings")
@@ -365,6 +369,18 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(context, "Email deleted", Toast.LENGTH_SHORT).show()
                                     navController.popBackStack()
                                 }
+                            }
+                        )
+                    }
+                    composable("search") {
+                        SearchScreen(
+                            emails = emails,
+                            onEmailClick = { email ->
+                                selectedEmail = email
+                                navController.navigate("email_detail")
+                            },
+                            onBackClick = {
+                                navController.popBackStack()
                             }
                         )
                     }

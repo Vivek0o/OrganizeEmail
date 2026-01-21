@@ -46,9 +46,11 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -117,6 +119,7 @@ fun EmailListScreen(
     onBackClick: (() -> Unit)? = null,
     onLabelClick: ((String) -> Unit)? = null,
     onSmartFilterClick: ((String) -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     onCleanupClick: (() -> Unit)? = null,
     onDeleteEmails: ((List<String>) -> Unit)? = null
@@ -424,7 +427,8 @@ fun EmailListScreen(
                         CategoryCardGrid(
                             emails = emails,
                             onCategoryClick = onCategoryClick,
-                            onSmartFilterClick = onSmartFilterClick
+                            onSmartFilterClick = onSmartFilterClick,
+                            onSearchClick = onSearchClick
                         )
                     } else if (onSenderClick != null && !showAllEmails) {
                         SenderCardGrid(emails = emails, onSenderClick = onSenderClick)
@@ -483,7 +487,8 @@ fun EmptyStateView() {
 fun CategoryCardGrid(
     emails: List<EmailUI>,
     onCategoryClick: (String) -> Unit,
-    onSmartFilterClick: ((String) -> Unit)? = null
+    onSmartFilterClick: ((String) -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null
 ) {
     val groups = emails.groupBy { it.category }.toList().sortedByDescending { it.second.size }
 
@@ -494,6 +499,13 @@ fun CategoryCardGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Search Bar Section
+        if (onSearchClick != null) {
+            item(span = { GridItemSpan(2) }) {
+                SearchButton(onClick = onSearchClick)
+            }
+        }
+
         // Smart Filters Section
         if (onSmartFilterClick != null) {
             item(span = { GridItemSpan(2) }) {
@@ -1115,5 +1127,25 @@ fun LoadingSyncView(progress: Float = 0f) {
             color = GradientBlueStart, // Match toolbar theme color
             trackColor = GradientBlueEnd.copy(alpha = 0.3f),
         )
+    }
+}
+
+@Composable
+fun SearchButton(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("Search emails...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
