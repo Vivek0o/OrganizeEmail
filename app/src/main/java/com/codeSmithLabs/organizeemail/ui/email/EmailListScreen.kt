@@ -1,5 +1,7 @@
 package com.codeSmithLabs.organizeemail.ui.email
 
+import androidx.compose.material3.Button
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -50,6 +52,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -88,6 +91,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.codeSmithLabs.organizeemail.R
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
@@ -130,6 +134,11 @@ fun EmailListScreen(
     // Selection Mode State
     var selectedEmailIds by remember { mutableStateOf(emptySet<String>()) }
     val isSelectionMode = selectedEmailIds.isNotEmpty()
+
+    if (error != null && error.contains("access token", ignoreCase = true)) {
+        AccessDeniedView(onGrantPermissionClick = onSignOutClick)
+        return
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -462,6 +471,78 @@ fun EmailListScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessDeniedView(onGrantPermissionClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.il_access_denied),
+            contentDescription = "Access Denied",
+            modifier = Modifier.size(240.dp)
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "Permission Required",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Please grant access to read your emails so we can organize them for you.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onGrantPermissionClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                disabledContainerColor = Color.Black.copy(alpha = 0.1f)
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp
+            ),
+            contentPadding = PaddingValues()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF2C2C2C),
+                                Color(0xFF000000)
+                            )
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Grant Permission",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
     }
