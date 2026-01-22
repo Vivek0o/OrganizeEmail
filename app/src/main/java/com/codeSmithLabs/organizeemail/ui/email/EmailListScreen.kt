@@ -556,11 +556,16 @@ fun EmptyStateView() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_empty_mails),
+            painter = painterResource(R.drawable.il_no_data_found),
             contentDescription = "No Emails",
             modifier = Modifier.size(240.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No Email found",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

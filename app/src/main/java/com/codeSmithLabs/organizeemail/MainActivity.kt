@@ -29,6 +29,7 @@ import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
 import com.codeSmithLabs.organizeemail.ui.search.SearchScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
+import com.codeSmithLabs.organizeemail.ui.login.LogoutScreen
 import com.codeSmithLabs.organizeemail.ui.onboarding.OnboardingActivity
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
 import com.codeSmithLabs.organizeemail.ui.settings.PrivacyDataScreen
@@ -127,6 +128,13 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         }
                     }
+                    composable("logout_transition") {
+                        LogoutScreen(
+                            onLogoutCompleted = {
+                                viewModel.signOut()
+                            }
+                        )
+                    }
                     composable("email_list") {
                         val lifecycleOwner = LocalLifecycleOwner.current
                         DisposableEffect(lifecycleOwner) {
@@ -158,7 +166,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = "OrganizeEmail",
                             onSenderClick = { key ->
@@ -214,7 +222,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = title,
                             onSenderClick = { key ->
@@ -244,7 +252,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = labelName,
                             onSenderClick = { key ->
@@ -290,7 +298,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = category,
                             onSenderClick = { key ->
@@ -333,7 +341,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = key,
                             onSenderClick = null,
@@ -466,7 +474,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = title,
                             onSenderClick = null,
