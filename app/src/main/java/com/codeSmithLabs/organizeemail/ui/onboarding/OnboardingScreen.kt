@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import com.codeSmithLabs.organizeemail.ui.theme.AppFontFamily
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -187,10 +188,10 @@ fun OnboardingPageContent(page: OnboardingPage) {
         
         Text(
             buildAnnotatedString {
-                withStyle(style = SpanStyle(fontWeight = FontWeight.Light)) {
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Light, fontFamily = AppFontFamily)) {
                     append(page.titleNormal + "\n")
                 }
-                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, fontFamily = AppFontFamily)) {
                     append(page.titleBold)
                 }
             },
@@ -204,6 +205,7 @@ fun OnboardingPageContent(page: OnboardingPage) {
         Text(
             text = page.description,
             style = MaterialTheme.typography.bodyLarge,
+            fontFamily = AppFontFamily,
             color = Color.Black.copy(alpha = 0.6f),
             lineHeight = 28.sp,
             fontSize = 18.sp

@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
 
@@ -111,7 +112,11 @@ fun SettingsScreen(
                         }
                         Switch(
                             checked = isSyncEnabled,
-                            onCheckedChange = { viewModel.toggleSync(it) }
+                            onCheckedChange = { viewModel.toggleSync(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = Color.Black,
+                                checkedThumbColor = Color.White
+                            )
                         )
                     }
 
@@ -172,7 +177,7 @@ fun SettingsScreen(
                                         onClick = { viewModel.updateSyncFrequency(hours) },
                                         enabled = isSyncEnabled,
                                         colors = RadioButtonDefaults.colors(
-                                            selectedColor = MaterialTheme.colorScheme.primary,
+                                            selectedColor = Color.Black,
                                             unselectedColor = Color.Black.copy(alpha = 0.6f)
                                         )
                                     )
@@ -231,6 +236,29 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            val context = LocalContext.current
+            val versionName = remember {
+                try {
+                    val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                    packageInfo.versionName
+                } catch (e: Exception) {
+                    "Unknown"
+                }
+            }
+
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Version $versionName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
             }
         }
     }
