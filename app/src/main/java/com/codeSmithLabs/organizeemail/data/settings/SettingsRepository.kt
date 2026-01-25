@@ -27,10 +27,7 @@ class SettingsRepository(private val context: Context) {
 
     val syncEnabled: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[SYNC_ENABLED] ?: false // Default to false (opt-in) or true? User asked for feature, maybe default true? Let's stick to false for safety or true for convenience. 
-            // The user said "if enable then only background sync should happen". Usually sync is on by default in apps.
-            // But let's default to TRUE so it works out of box, unless user turns it off.
-            preferences[SYNC_ENABLED] ?: true 
+            preferences[SYNC_ENABLED] ?: false 
         }
 
     suspend fun setSyncFrequency(hours: Int) {

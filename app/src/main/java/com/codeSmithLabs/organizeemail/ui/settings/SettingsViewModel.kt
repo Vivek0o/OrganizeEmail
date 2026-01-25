@@ -18,7 +18,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 12)
 
     val syncEnabled: StateFlow<Boolean> = repository.syncEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun updateSyncFrequency(hours: Int) {
         viewModelScope.launch {

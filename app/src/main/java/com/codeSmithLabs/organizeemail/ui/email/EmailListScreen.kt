@@ -1,5 +1,7 @@
 package com.codeSmithLabs.organizeemail.ui.email
 
+import androidx.compose.material3.Button
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -9,7 +11,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -48,9 +48,12 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -79,7 +82,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -89,6 +91,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.codeSmithLabs.organizeemail.R
 import com.codeSmithLabs.organizeemail.data.model.EmailUI
@@ -96,16 +99,10 @@ import com.codeSmithLabs.organizeemail.data.model.GmailLabel
 import com.codeSmithLabs.organizeemail.ui.common.AppIcon
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import kotlinx.coroutines.launch
-
 import androidx.compose.ui.graphics.Brush
-import com.codeSmithLabs.organizeemail.ui.theme.BrandGradientEnd
-import com.codeSmithLabs.organizeemail.ui.theme.BrandGradientStart
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueStart
 import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkEnd
-import com.codeSmithLabs.organizeemail.ui.theme.GradientPinkStart
-import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleEnd
-import com.codeSmithLabs.organizeemail.ui.theme.GradientPurpleStart
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,6 +123,7 @@ fun EmailListScreen(
     onBackClick: (() -> Unit)? = null,
     onLabelClick: ((String) -> Unit)? = null,
     onSmartFilterClick: ((String) -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     onCleanupClick: (() -> Unit)? = null,
     onDeleteEmails: ((List<String>) -> Unit)? = null
@@ -136,6 +134,11 @@ fun EmailListScreen(
     // Selection Mode State
     var selectedEmailIds by remember { mutableStateOf(emptySet<String>()) }
     val isSelectionMode = selectedEmailIds.isNotEmpty()
+
+    if (error != null && error.contains("access token", ignoreCase = true)) {
+        AccessDeniedView(onGrantPermissionClick = onSignOutClick)
+        return
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -433,7 +436,8 @@ fun EmailListScreen(
                         CategoryCardGrid(
                             emails = emails,
                             onCategoryClick = onCategoryClick,
-                            onSmartFilterClick = onSmartFilterClick
+                            onSmartFilterClick = onSmartFilterClick,
+                            onSearchClick = onSearchClick
                         )
                     } else if (onSenderClick != null && !showAllEmails) {
                         SenderCardGrid(emails = emails, onSenderClick = onSenderClick)
@@ -473,6 +477,78 @@ fun EmailListScreen(
 }
 
 @Composable
+fun AccessDeniedView(onGrantPermissionClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.il_access_denied),
+            contentDescription = "Access Denied",
+            modifier = Modifier.size(240.dp)
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "Permission Required",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "Please grant access to read your emails so we can organize them for you.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(48.dp))
+        Button(
+            onClick = onGrantPermissionClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                disabledContainerColor = Color.Black.copy(alpha = 0.1f)
+            ),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp
+            ),
+            contentPadding = PaddingValues()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF2C2C2C),
+                                Color(0xFF000000)
+                            )
+                        ),
+                        shape = RoundedCornerShape(28.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Grant Permission",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun EmptyStateView() {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -480,11 +556,16 @@ fun EmptyStateView() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_empty_mails),
+            painter = painterResource(R.drawable.il_no_data_found),
             contentDescription = "No Emails",
             modifier = Modifier.size(240.dp)
         )
         Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No Email found",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -492,7 +573,8 @@ fun EmptyStateView() {
 fun CategoryCardGrid(
     emails: List<EmailUI>,
     onCategoryClick: (String) -> Unit,
-    onSmartFilterClick: ((String) -> Unit)? = null
+    onSmartFilterClick: ((String) -> Unit)? = null,
+    onSearchClick: (() -> Unit)? = null
 ) {
     val groups = emails.groupBy { it.category }.toList().sortedByDescending { it.second.size }
 
@@ -503,6 +585,13 @@ fun CategoryCardGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize()
     ) {
+        // Search Bar Section
+        if (onSearchClick != null) {
+            item(span = { GridItemSpan(2) }) {
+                SearchButton(onClick = onSearchClick)
+            }
+        }
+
         // Smart Filters Section
         if (onSmartFilterClick != null) {
             item(span = { GridItemSpan(2) }) {
@@ -638,9 +727,6 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Gradient Background with low alpha - REMOVED per user request
-            // Kept plain white/transparent inside the card as container is already white
-
             Column(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -659,7 +745,7 @@ fun CategoryCard(category: String, emails: List<EmailUI>, onClick: () -> Unit) {
                     CategoryIconGrid(senders = senders)
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
                     text = category,
@@ -1127,5 +1213,25 @@ fun LoadingSyncView(progress: Float = 0f) {
             color = GradientBlueStart, // Match toolbar theme color
             trackColor = GradientBlueEnd.copy(alpha = 0.3f),
         )
+    }
+}
+
+@Composable
+fun SearchButton(onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier.fillMaxWidth().height(48.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(16.dp))
+            Text("Search emails...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

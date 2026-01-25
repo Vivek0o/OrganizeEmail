@@ -15,12 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-
+import com.codeSmithLabs.organizeemail.R
 import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Brush
 import com.codeSmithLabs.organizeemail.ui.theme.GradientBlueEnd
@@ -74,11 +72,8 @@ fun PrivacyDataScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Header Section
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
+            Card(elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Row(
                     modifier = Modifier
@@ -87,21 +82,19 @@ fun PrivacyDataScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        painter = painterResource(android.R.drawable.ic_secure),
+                        painter = painterResource(R.drawable.ic_security),
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = "We value your privacy. Your data stays yours.",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = Color.Black
                     )
                 }
             }
 
-            // Section 1: What data we access
             PrivacySection(
                 title = "What data we access",
                 icon = Icons.Default.Info,
@@ -110,7 +103,6 @@ fun PrivacyDataScreen(
                 )
             )
 
-            // Section 2: Why we access it
             PrivacySection(
                 title = "Why we access it",
                 icon = Icons.Default.Check,
@@ -120,7 +112,6 @@ fun PrivacyDataScreen(
                 )
             )
 
-            // Section 3: What we do NOT do
             PrivacySection(
                 title = "What we do NOT do",
                 icon = Icons.Default.Close,
@@ -132,14 +123,11 @@ fun PrivacyDataScreen(
                 isNegative = true
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Detailed Policy Link
             Button(
                 onClick = onPrivacyPolicyClick,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor =  Color(0xFF000000)
                 )
             ) {
                 Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -162,7 +150,6 @@ fun PrivacySection(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -178,8 +165,9 @@ fun PrivacySection(
         
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
             )
         ) {
             Column(modifier = Modifier.padding(16.dp)) {

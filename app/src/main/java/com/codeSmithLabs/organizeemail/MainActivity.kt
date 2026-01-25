@@ -27,7 +27,9 @@ import com.codeSmithLabs.organizeemail.data.model.EmailUI
 import com.codeSmithLabs.organizeemail.ui.cleanup.CleanupAssistantScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailDetailScreen
 import com.codeSmithLabs.organizeemail.ui.email.EmailListScreen
+import com.codeSmithLabs.organizeemail.ui.search.SearchScreen
 import com.codeSmithLabs.organizeemail.ui.login.LoginScreen
+import com.codeSmithLabs.organizeemail.ui.login.LogoutScreen
 import com.codeSmithLabs.organizeemail.ui.onboarding.OnboardingActivity
 import com.codeSmithLabs.organizeemail.ui.settings.SettingsScreen
 import com.codeSmithLabs.organizeemail.ui.settings.PrivacyDataScreen
@@ -126,6 +128,13 @@ class MainActivity : ComponentActivity() {
                             Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
                         }
                     }
+                    composable("logout_transition") {
+                        LogoutScreen(
+                            onLogoutCompleted = {
+                                viewModel.signOut()
+                            }
+                        )
+                    }
                     composable("email_list") {
                         val lifecycleOwner = LocalLifecycleOwner.current
                         DisposableEffect(lifecycleOwner) {
@@ -157,7 +166,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = "OrganizeEmail",
                             onSenderClick = { key ->
@@ -172,6 +181,9 @@ class MainActivity : ComponentActivity() {
                             },
                             onSmartFilterClick = { type ->
                                 navController.navigate("smart_filter/$type")
+                            },
+                            onSearchClick = {
+                                navController.navigate("search")
                             },
                             onSettingsClick = {
                                 navController.navigate("settings")
@@ -210,7 +222,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = title,
                             onSenderClick = { key ->
@@ -240,7 +252,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = labelName,
                             onSenderClick = { key ->
@@ -286,7 +298,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = category,
                             onSenderClick = { key ->
@@ -329,7 +341,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = key,
                             onSenderClick = null,
@@ -365,6 +377,18 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(context, "Email deleted", Toast.LENGTH_SHORT).show()
                                     navController.popBackStack()
                                 }
+                            }
+                        )
+                    }
+                    composable("search") {
+                        SearchScreen(
+                            emails = emails,
+                            onEmailClick = { email ->
+                                selectedEmail = email
+                                navController.navigate("email_detail")
+                            },
+                            onBackClick = {
+                                navController.popBackStack()
                             }
                         )
                     }
@@ -450,7 +474,7 @@ class MainActivity : ComponentActivity() {
                                 navController.navigate("email_detail")
                             },
                             onSignOutClick = {
-                                viewModel.signOut()
+                                navController.navigate("logout_transition")
                             },
                             title = title,
                             onSenderClick = null,
