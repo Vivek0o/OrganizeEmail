@@ -11,6 +11,58 @@ The app is designed with a security-first approach, ensuring that user data rema
 
 ---
 
+## Screenshots
+
+### Onboarding & Authentication
+
+<p align="center">
+  <img src="screenshots/screenshot_onboarding1.png" width="260"/>
+  <img src="screenshots/screenshot_onboarding2.png" width="260"/>
+  <img src="screenshots/screenshot_login.png" width="260"/>
+</p>
+
+<p align="center">
+  <sub>
+    Fig 1: Onboarding introduction &nbsp;&nbsp;|&nbsp;&nbsp;
+    Fig 2: Feature highlights &nbsp;&nbsp;|&nbsp;&nbsp;
+    Fig 3: Secure Gmail authentication
+  </sub>
+</p>
+
+---
+
+### Core Features
+
+<p align="center">
+  <img src="screenshots/screenshot_category.png" width="260"/>
+  <img src="screenshots/screenshot_cleanup.png" width="260"/>
+  <img src="screenshots/screenshot_profile.png" width="260"/>
+</p>
+
+<p align="center">
+  <sub>
+    Fig 4: Smart email categorization &nbsp;&nbsp;|&nbsp;&nbsp;
+    Fig 5: Cleanup assistant with storage insights &nbsp;&nbsp;|&nbsp;&nbsp;
+    Fig 6: User profile
+  </sub>
+</p>
+
+---
+
+### Settings
+
+<p align="center">
+  <img src="screenshots/screenshot_setting.png" width="260"/>
+</p>
+
+<p align="center">
+  <sub>
+    Fig 7: Application settings
+  </sub>
+</p>
+
+---
+
 ## Features
 
 ### Intelligent Email Categorization
@@ -78,4 +130,3 @@ No additional permissions are used.
 - Local caching layer
 - Background synchronization
 - Modular and scalable design
-
